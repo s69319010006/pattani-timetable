@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการข้อมูลห้องเรียน | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html" class="active"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>จัดการข้อมูลห้องเรียนและโรงฝึกงาน (Classrooms)</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลด...</span>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-primary" onclick="openClassroomModal()">
+                        <span>➕</span> เพิ่มห้องเรียน
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>ห้องเรียนและสถานที่จัดการเรียนการสอน</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="searchRoom" class="form-control" placeholder="ค้นหารหัสหรือชื่อห้อง..." style="width: 200px;" oninput="filterRooms()">
+                            <select id="filterType" class="form-select" style="width: 180px;" onchange="filterRooms()">
+                                <option value="">-- ทุกประเภทห้อง --</option>
+                                <option value="ห้องเรียน">ห้องเรียน</option>
+                                <option value="ห้องปฏิบัติการ">ห้องปฏิบัติการ</option>
+                                <option value="โรงฝึกงาน">โรงฝึกงาน</option>
+                                <option value="ห้องคอมพิวเตอร์">ห้องคอมพิวเตอร์</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัสห้อง</th>
+                                        <th>ชื่อห้อง / โรงฝึกงาน</th>
+                                        <th>อาคาร / ชั้น</th>
+                                        <th style="text-align: center;">ความจุ (คน)</th>
+                                        <th style="text-align: center;">ประเภท</th>
+                                        <th>แผนกที่รับผิดชอบ</th>
+                                        <th style="text-align: center;">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="roomsTableBody">
+                                    <tr><td colspan="7" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: Classroom Add/Edit -->
+    <div class="modal-backdrop" id="roomModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="modalRoomTitle">เพิ่มห้องเรียน</h3>
+                <button class="modal-close" onclick="closeModal('roomModal')">✕</button>
+            </div>
+            <form id="roomForm" onsubmit="saveRoom(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="roomId">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">รหัสห้อง *</label>
+                            <input type="text" id="rCode" class="form-control" required placeholder="เช่น R201 หรือ WS-AUTO">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">ความจุ (คน) *</label>
+                            <input type="number" id="rCapacity" class="form-control" required value="40" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ชื่อห้องเรียน / โรงฝึกงาน *</label>
+                        <input type="text" id="rName" class="form-control" required placeholder="เช่น ห้องปฏิบัติการคอมพิวเตอร์ 1">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">อาคาร</label>
+                            <input type="text" id="rBuilding" class="form-control" placeholder="เช่น อาคารวิทยบริการ">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ชั้น</label>
+                            <input type="number" id="rFloor" class="form-control" value="1" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">ประเภทห้อง *</label>
+                            <select id="rType" class="form-select" required>
+                                <option value="ห้องเรียน">ห้องเรียน (ทฤษฎี)</option>
+                                <option value="ห้องปฏิบัติการ">ห้องปฏิบัติการ</option>
+                                <option value="โรงฝึกงาน">โรงฝึกงาน</option>
+                                <option value="ห้องคอมพิวเตอร์">ห้องคอมพิวเตอร์</option>
+                                <option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">แผนกที่รับผิดชอบ</label>
+                            <select id="rDeptId" class="form-select">
+                                <option value="">-- ส่วนกลาง / ทุกแผนก --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">อุปกรณ์และสิ่งอำนวยความสะดวก</label>
+                        <input type="text" id="rFacilities" class="form-control" placeholder="เช่น โปรเจคเตอร์, คอมพิวเตอร์ 35 เครื่อง, เครื่องปรับอากาศ">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('roomModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allRooms = [];
+        let allDepts = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            loadCurrentSemester();
+            await loadDepartments();
+            await loadRooms();
+        });
+
+        async function loadDepartments() {
+            try {
+                allDepts = await apiCall('/assignments/departments');
+                const formSelect = document.getElementById('rDeptId');
+                formSelect.innerHTML = '<option value="">-- ส่วนกลาง / ทุกแผนก --</option>' + 
+                    allDepts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            } catch (e) {}
+        }
+
+        async function loadRooms() {
+            try {
+                allRooms = await apiCall('/classrooms');
+                renderRooms(allRooms);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderRooms(rooms) {
+            const tbody = document.getElementById('roomsTableBody');
+            if (rooms.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">ไม่พบข้อมูลห้องเรียน</td></tr>';
+                return;
+            }
+
+            const typeBadges = {
+                'ห้องเรียน': 'badge-secondary',
+                'ห้องปฏิบัติการ': 'badge-primary',
+                'โรงฝึกงาน': 'badge-warning',
+                'ห้องคอมพิวเตอร์': 'badge-info'
+            };
+
+            tbody.innerHTML = rooms.map(r => `
+                <tr>
+                    <td style="font-family: monospace; font-weight: 700; color: #1e3a8a;">${r.code}</td>
+                    <td><strong>${r.name}</strong></td>
+                    <td>${r.building || '-'} ${r.floor ? `(ชั้น ${r.floor})` : ''}</td>
+                    <td style="text-align: center;"><span class="badge badge-secondary">${r.capacity} คน</span></td>
+                    <td style="text-align: center;"><span class="badge ${typeBadges[r.room_type] || 'badge-secondary'}">${r.room_type}</span></td>
+                    <td>${r.department_name || 'ส่วนกลาง'}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-sm btn-secondary" onclick="editRoom(${r.id})">✏️ แก้ไข</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteRoom(${r.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterRooms() {
+            const q = document.getElementById('searchRoom').value.toLowerCase().trim();
+            const type = document.getElementById('filterType').value;
+
+            const filtered = allRooms.filter(r => {
+                const matchQ = (r.code + ' ' + r.name + ' ' + (r.building || '')).toLowerCase().includes(q);
+                const matchType = !type || r.room_type === type;
+                return matchQ && matchType;
+            });
+
+            renderRooms(filtered);
+        }
+
+        function openClassroomModal() {
+            document.getElementById('modalRoomTitle').textContent = 'เพิ่มห้องเรียน';
+            document.getElementById('roomForm').reset();
+            document.getElementById('roomId').value = '';
+            document.getElementById('roomModal').classList.add('show');
+        }
+
+        function editRoom(id) {
+            const r = allRooms.find(item => item.id === id);
+            if (!r) return;
+
+            document.getElementById('modalRoomTitle').textContent = 'แก้ไขห้องเรียน';
+            document.getElementById('roomId').value = r.id;
+            document.getElementById('rCode').value = r.code;
+            document.getElementById('rName').value = r.name;
+            document.getElementById('rCapacity').value = r.capacity;
+            document.getElementById('rBuilding').value = r.building || '';
+            document.getElementById('rFloor').value = r.floor || 1;
+            document.getElementById('rType').value = r.room_type;
+            document.getElementById('rDeptId').value = r.department_id || '';
+            document.getElementById('rFacilities').value = r.facilities || '';
+
+            document.getElementById('roomModal').classList.add('show');
+        }
+
+        async function saveRoom(e) {
+            e.preventDefault();
+            const id = document.getElementById('roomId').value;
+            const body = {
+                code: document.getElementById('rCode').value.trim(),
+                name: document.getElementById('rName').value.trim(),
+                capacity: parseInt(document.getElementById('rCapacity').value) || 40,
+                building: document.getElementById('rBuilding').value.trim(),
+                floor: parseInt(document.getElementById('rFloor').value) || 1,
+                room_type: document.getElementById('rType').value,
+                department_id: document.getElementById('rDeptId').value || null,
+                facilities: document.getElementById('rFacilities').value.trim()
+            };
+
+            try {
+                if (id) {
+                    await apiCall(`/classrooms/${id}`, { method: 'PUT', body });
+                    showToast('แก้ไขข้อมูลห้องเรียนสำเร็จ', 'success');
+                } else {
+                    await apiCall('/classrooms', { method: 'POST', body });
+                    showToast('เพิ่มห้องเรียนสำเร็จ', 'success');
+                }
+                closeModal('roomModal');
+                await loadRooms();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteRoom(id) {
+            showConfirmDialog('ยืนยันการลบห้องเรียน', 'คุณแน่ใจหรือไม่ว่าต้องการลบห้องเรียนนี้ออกจากระบบ?', async () => {
+                try {
+                    await apiCall(`/classrooms/${id}`, { method: 'DELETE' });
+                    showToast('ลบห้องเรียนเรียบร้อยแล้ว', 'info');
+                    await loadRooms();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+    </script>
+</body>
+</html>

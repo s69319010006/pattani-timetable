@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการข้อมูลรายวิชา | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html" class="active"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>จัดการข้อมูลรายวิชา (Subjects)</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลด...</span>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-primary" onclick="openSubjectModal()">
+                        <span>➕</span> เพิ่มรายวิชา
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>รายวิชาทั้งหมดในหลักสูตร</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="searchSubject" class="form-control" placeholder="ค้นหารหัสหรือชื่อวิชา..." style="width: 220px;" oninput="filterSubjects()">
+                            <select id="filterDept" class="form-select" style="width: 200px;" onchange="filterSubjects()">
+                                <option value="">-- ทุกแผนกวิชา --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัสวิชา</th>
+                                        <th>ชื่อรายวิชา</th>
+                                        <th>แผนกวิชา</th>
+                                        <th style="text-align: center;">นก. (ท-ป-ร)</th>
+                                        <th style="text-align: center;">ประเภทวิชา</th>
+                                        <th style="text-align: center;">ห้องปฏิบัติการ</th>
+                                        <th style="text-align: center;">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subjectsTableBody">
+                                    <tr><td colspan="7" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: Subject Add/Edit -->
+    <div class="modal-backdrop" id="subjectModal">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="modalSubjectTitle">เพิ่มรายวิชา</h3>
+                <button class="modal-close" onclick="closeModal('subjectModal')">✕</button>
+            </div>
+            <form id="subjectForm" onsubmit="saveSubject(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="subjectId">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">รหัสวิชา *</label>
+                            <input type="text" id="sCode" class="form-control" required placeholder="เช่น 20101-2001">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">ชื่อย่อ</label>
+                            <input type="text" id="sShortName" class="form-control" placeholder="เช่น แก๊สโซลีน">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ชื่อรายวิชา (เต็ม) *</label>
+                        <input type="text" id="sName" class="form-control" required placeholder="เช่น งานเครื่องยนต์แก๊สโซลีน">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">แผนกวิชา</label>
+                            <select id="sDeptId" class="form-select">
+                                <option value="">-- เลือกแผนกวิชา --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ประเภทวิชา</label>
+                            <select id="sType" class="form-select">
+                                <option value="ทฤษฎี">ทฤษฎี</option>
+                                <option value="ปฏิบัติ">ปฏิบัติ</option>
+                                <option value="ทฤษฎีและปฏิบัติ">ทฤษฎีและปฏิบัติ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">หน่วยกิต</label>
+                            <input type="number" step="0.5" id="sCredits" class="form-control" value="3" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ชม. ทฤษฎี</label>
+                            <input type="number" id="sTheoryHours" class="form-control" value="1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ชม. ปฏิบัติ</label>
+                            <input type="number" id="sPracticeHours" class="form-control" value="4" min="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="sRequiresLab" style="width: 18px; height: 18px;">
+                            <span style="font-weight: 500; font-size: 14px; color: #1e293b;">
+                                บังคับต้องใช้ห้องปฏิบัติการ / โรงฝึกงาน (Lab / Workshop Required)
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('subjectModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allSubjects = [];
+        let allDepts = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            loadCurrentSemester();
+            await loadDepartments();
+            await loadSubjects();
+        });
+
+        async function loadDepartments() {
+            try {
+                allDepts = await apiCall('/assignments/departments');
+                const filterSelect = document.getElementById('filterDept');
+                const formSelect = document.getElementById('sDeptId');
+
+                const opts = allDepts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                filterSelect.innerHTML = '<option value="">-- ทุกแผนกวิชา --</option>' + opts;
+                formSelect.innerHTML = '<option value="">-- เลือกแผนกวิชา --</option>' + opts;
+            } catch (e) {}
+        }
+
+        async function loadSubjects() {
+            try {
+                allSubjects = await apiCall('/subjects');
+                renderSubjects(allSubjects);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderSubjects(subjects) {
+            const tbody = document.getElementById('subjectsTableBody');
+            if (subjects.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">ไม่พบข้อมูลรายวิชา</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = subjects.map(s => `
+                <tr>
+                    <td style="font-family: monospace; font-weight: 700; color: #1e3a8a;">${s.code}</td>
+                    <td><strong>${s.name}</strong> ${s.short_name ? `<span style="color: #64748b; font-size: 12px;">(${s.short_name})</span>` : ''}</td>
+                    <td><span class="badge badge-secondary">${s.department_name || '-'}</span></td>
+                    <td style="text-align: center;"><strong>${s.credits}</strong> (${s.theory_hours}-${s.practice_hours}-${s.total_hours})</td>
+                    <td style="text-align: center;"><span class="badge badge-info">${s.subject_type}</span></td>
+                    <td style="text-align: center;">
+                        ${s.requires_lab ? '<span class="badge badge-danger">🧪 ต้องใช้ Lab</span>' : '<span style="color: #94a3b8; font-size: 12px;">ห้องปกติ</span>'}
+                    </td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-sm btn-secondary" onclick="editSubject(${s.id})">✏️ แก้ไข</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubject(${s.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterSubjects() {
+            const q = document.getElementById('searchSubject').value.toLowerCase().trim();
+            const deptId = document.getElementById('filterDept').value;
+
+            const filtered = allSubjects.filter(s => {
+                const matchQ = (s.code + ' ' + s.name).toLowerCase().includes(q);
+                const matchDept = !deptId || s.department_id === parseInt(deptId);
+                return matchQ && matchDept;
+            });
+
+            renderSubjects(filtered);
+        }
+
+        function openSubjectModal() {
+            document.getElementById('modalSubjectTitle').textContent = 'เพิ่มรายวิชา';
+            document.getElementById('subjectForm').reset();
+            document.getElementById('subjectId').value = '';
+            document.getElementById('subjectModal').classList.add('show');
+        }
+
+        function editSubject(id) {
+            const s = allSubjects.find(item => item.id === id);
+            if (!s) return;
+
+            document.getElementById('modalSubjectTitle').textContent = 'แก้ไขรายวิชา';
+            document.getElementById('subjectId').value = s.id;
+            document.getElementById('sCode').value = s.code;
+            document.getElementById('sName').value = s.name;
+            document.getElementById('sShortName').value = s.short_name || '';
+            document.getElementById('sDeptId').value = s.department_id || '';
+            document.getElementById('sType').value = s.subject_type;
+            document.getElementById('sCredits').value = s.credits;
+            document.getElementById('sTheoryHours').value = s.theory_hours;
+            document.getElementById('sPracticeHours').value = s.practice_hours;
+            document.getElementById('sRequiresLab').checked = s.requires_lab === 1;
+
+            document.getElementById('subjectModal').classList.add('show');
+        }
+
+        async function saveSubject(e) {
+            e.preventDefault();
+            const id = document.getElementById('subjectId').value;
+            const th = parseInt(document.getElementById('sTheoryHours').value) || 0;
+            const pr = parseInt(document.getElementById('sPracticeHours').value) || 0;
+
+            const body = {
+                code: document.getElementById('sCode').value.trim(),
+                name: document.getElementById('sName').value.trim(),
+                short_name: document.getElementById('sShortName').value.trim(),
+                department_id: document.getElementById('sDeptId').value || null,
+                subject_type: document.getElementById('sType').value,
+                credits: parseFloat(document.getElementById('sCredits').value) || 0,
+                theory_hours: th,
+                practice_hours: pr,
+                total_hours: th + pr,
+                requires_lab: document.getElementById('sRequiresLab').checked ? 1 : 0
+            };
+
+            try {
+                if (id) {
+                    await apiCall(`/subjects/${id}`, { method: 'PUT', body });
+                    showToast('แก้ไขข้อมูลรายวิชาสำเร็จ', 'success');
+                } else {
+                    await apiCall('/subjects', { method: 'POST', body });
+                    showToast('เพิ่มรายวิชาสำเร็จ', 'success');
+                }
+                closeModal('subjectModal');
+                await loadSubjects();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteSubject(id) {
+            showConfirmDialog('ยืนยันการลบรายวิชา', 'คุณแน่ใจหรือไม่ว่าต้องการลบรายวิชานี้ออกจากระบบ?', async () => {
+                try {
+                    await apiCall(`/subjects/${id}`, { method: 'DELETE' });
+                    showToast('ลบรายวิชาเรียบร้อยแล้ว', 'info');
+                    await loadSubjects();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+    </script>
+</body>
+</html>

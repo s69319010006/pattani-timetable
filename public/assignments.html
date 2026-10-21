@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>การมอบหมายการสอนและโครงสร้างวิชาการ | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .nav-tab-btn {
+            padding: 10px 18px;
+            background: none;
+            border: none;
+            font-family: var(--font-heading);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: var(--transition);
+        }
+
+        .nav-tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .nav-tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html" class="active"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>การมอบหมายการสอนและโครงสร้างวิชาการ</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลด...</span>
+                </div>
+                <div class="topbar-actions" id="topbarActions">
+                    <button class="btn btn-primary" onclick="openAssignmentModal()">
+                        <span>➕</span> มอบหมายการสอนใหม่
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <button class="nav-tab-btn active" onclick="switchTab('tabAssignments')">📝 การมอบหมายสอน (Assignments)</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabGroups')">👥 กลุ่มเรียน (Student Groups)</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabPrograms')">📜 หลักสูตร (Programs)</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabDepts')">🏢 แผนกวิชา (Departments)</button>
+                </div>
+
+                <!-- Tab 1: Teaching Assignments -->
+                <div class="tab-content active" id="tabAssignments">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>รายการมอบหมายการสอนในภาคเรียนนี้</h3>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="searchAssign" class="form-control" placeholder="ค้นหาครูหรือวิชา..." style="width: 220px;" oninput="filterAssignments()">
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>ครูผู้สอน</th>
+                                            <th>รหัส - ชื่อวิชา</th>
+                                            <th>กลุ่มเรียน</th>
+                                            <th style="text-align: center;">ชม./สัปดาห์</th>
+                                            <th>ห้องประจำ/ห้องที่ชอบ</th>
+                                            <th>หมายเหตุ</th>
+                                            <th style="text-align: center;">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="assignmentsTableBody">
+                                        <tr><td colspan="7" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Student Groups -->
+                <div class="tab-content" id="tabGroups">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>กลุ่มเรียนในภาคเรียน</h3>
+                            <button class="btn btn-sm btn-primary" onclick="openGroupModal()">➕ เพิ่มกลุ่มเรียน</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสกลุ่ม</th>
+                                            <th>ชื่อกลุ่มเรียน</th>
+                                            <th>ระดับ / สาขาวิชา</th>
+                                            <th>ชั้นปี</th>
+                                            <th style="text-align: center;">จำนวนนักเรียน (คน)</th>
+                                            <th style="text-align: center;">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="groupsTableBody">
+                                        <tr><td colspan="6" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Programs -->
+                <div class="tab-content" id="tabPrograms">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>หลักสูตรและสาขาวิชาที่เปิดสอน</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสหลักสูตร</th>
+                                            <th>ชื่อสาขาวิชา</th>
+                                            <th>ระดับ</th>
+                                            <th>แผนกวิชา</th>
+                                            <th style="text-align: center;">ระยะเวลา</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="programsTableBody">
+                                        <tr><td colspan="5" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Departments -->
+                <div class="tab-content" id="tabDepts">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>แผนกวิชาในวิทยาลัย</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสแผนก</th>
+                                            <th>ชื่อแผนกวิชา</th>
+                                            <th>คำอธิบาย</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="deptsTableBody">
+                                        <tr><td colspan="3" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: Assignment Add/Edit -->
+    <div class="modal-backdrop" id="assignmentModal">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="modalAssignTitle">มอบหมายการสอน</h3>
+                <button class="modal-close" onclick="closeModal('assignmentModal')">✕</button>
+            </div>
+            <form id="assignForm" onsubmit="saveAssignment(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="assignId">
+                    
+                    <div class="form-group">
+                        <label class="form-label">เลือกครูผู้สอน *</label>
+                        <select id="aTeacherId" class="form-select" required>
+                            <option value="">-- เลือกครูผู้สอน --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">เลือกรายวิชา *</label>
+                        <select id="aSubjectId" class="form-select" required onchange="onSubjectSelectChange()">
+                            <option value="">-- เลือกรายวิชา --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">เลือกกลุ่มเรียน *</label>
+                        <select id="aGroupId" class="form-select" required>
+                            <option value="">-- เลือกกลุ่มเรียน --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">จำนวนคาบ/สัปดาห์ *</label>
+                            <input type="number" id="aHours" class="form-control" required value="4" min="1" max="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ห้องเรียนที่ต้องการ (ไม่บังคับ)</label>
+                            <select id="aPreferredRoom" class="form-select">
+                                <option value="">-- ให้ระบบเลือกอัตโนมัติ --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">หมายเหตุ / คำแนะนำ</label>
+                        <input type="text" id="aNotes" class="form-control" placeholder="เช่น เน้นคาบเช้า, ปฏิบัติห้องแล็บ">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('assignmentModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกการมอบหมาย</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Group Add -->
+    <div class="modal-backdrop" id="groupModal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>เพิ่มกลุ่มเรียนใหม่</h3>
+                <button class="modal-close" onclick="closeModal('groupModal')">✕</button>
+            </div>
+            <form id="groupForm" onsubmit="saveGroup(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">รหัสกลุ่ม *</label>
+                        <input type="text" id="gCode" class="form-control" required placeholder="เช่น ชย.67.2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ชื่อกลุ่มเรียน *</label>
+                        <input type="text" id="gName" class="form-control" required placeholder="เช่น ปวช.1 ช่างยนต์ กลุ่ม 2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">สาขาวิชา/หลักสูตร *</label>
+                        <select id="gProgId" class="form-select" required>
+                            <option value="">-- เลือกหลักสูตร --</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">ชั้นปี</label>
+                            <input type="number" id="gYearLevel" class="form-control" value="1" min="1" max="4">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">จำนวนนักเรียน (คน)</label>
+                            <input type="number" id="gStudentCount" class="form-control" value="30" min="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('groupModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกกลุ่มเรียน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let currentSemesterId = null;
+        let allAssignments = [];
+        let allTeachers = [];
+        let allSubjects = [];
+        let allGroups = [];
+        let allRooms = [];
+        let allPrograms = [];
+        let allDepts = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            const semester = await loadCurrentSemester();
+            if (semester) {
+                currentSemesterId = semester.id;
+                await loadAllMetadata();
+                await loadAssignments();
+            }
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            if (tabId === 'tabGroups') loadGroups();
+            if (tabId === 'tabPrograms') loadPrograms();
+            if (tabId === 'tabDepts') loadDepartments();
+        }
+
+        async function loadAllMetadata() {
+            try {
+                allTeachers = await apiCall('/teachers');
+                allSubjects = await apiCall('/subjects');
+                allGroups = await apiCall(`/assignments/student-groups?semester_id=${currentSemesterId}`);
+                allRooms = await apiCall('/classrooms');
+                allPrograms = await apiCall('/assignments/programs');
+                allDepts = await apiCall('/assignments/departments');
+
+                // Populate form selects
+                document.getElementById('aTeacherId').innerHTML = '<option value="">-- เลือกครูผู้สอน --</option>' + 
+                    allTeachers.map(t => `<option value="${t.id}">${t.prefix || ''}${t.first_name} ${t.last_name} (${t.department_name || '-'})</option>`).join('');
+
+                document.getElementById('aSubjectId').innerHTML = '<option value="">-- เลือกรายวิชา --</option>' + 
+                    allSubjects.map(s => `<option value="${s.id}">${s.code} ${s.name} (${s.subject_type})</option>`).join('');
+
+                document.getElementById('aGroupId').innerHTML = '<option value="">-- เลือกกลุ่มเรียน --</option>' + 
+                    allGroups.map(g => `<option value="${g.id}">${g.name} (${g.code})</option>`).join('');
+
+                document.getElementById('aPreferredRoom').innerHTML = '<option value="">-- ให้ระบบเลือกอัตโนมัติ --</option>' + 
+                    allRooms.map(r => `<option value="${r.id}">${r.name} (${r.room_type})</option>`).join('');
+
+                document.getElementById('gProgId').innerHTML = '<option value="">-- เลือกหลักสูตร --</option>' + 
+                    allPrograms.map(p => `<option value="${p.id}">${p.level} ${p.name}</option>`).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadAssignments() {
+            try {
+                allAssignments = await apiCall(`/assignments/teaching-assignments?semester_id=${currentSemesterId}`);
+                renderAssignments(allAssignments);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderAssignments(items) {
+            const tbody = document.getElementById('assignmentsTableBody');
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">ยังไม่มีการมอบหมายการสอน</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map(a => `
+                <tr>
+                    <td><strong>${a.teacher_prefix || ''}${a.teacher_first_name} ${a.teacher_last_name}</strong></td>
+                    <td>
+                        <span style="font-family: monospace; font-weight: 700; color: #1e3a8a;">${a.subject_code}</span><br>
+                        <span style="font-size: 13px;">${a.subject_name}</span>
+                        ${a.requires_lab ? '<span class="badge badge-danger" style="margin-left: 4px;">Lab</span>' : ''}
+                    </td>
+                    <td><span class="badge badge-info">${a.group_name}</span></td>
+                    <td style="text-align: center;"><strong>${a.hours_per_week}</strong> คาบ</td>
+                    <td>${a.preferred_room_name || '<span style="color: #94a3b8;">ระบบจัด</span>'}</td>
+                    <td style="color: #64748b; font-size: 12px;">${a.notes || '-'}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-sm btn-secondary" onclick="editAssignment(${a.id})">✏️</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${a.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterAssignments() {
+            const q = document.getElementById('searchAssign').value.toLowerCase().trim();
+            const filtered = allAssignments.filter(a => {
+                const text = (a.teacher_first_name + ' ' + a.teacher_last_name + ' ' + a.subject_code + ' ' + a.subject_name + ' ' + a.group_name).toLowerCase();
+                return text.includes(q);
+            });
+            renderAssignments(filtered);
+        }
+
+        function onSubjectSelectChange() {
+            const sId = parseInt(document.getElementById('aSubjectId').value);
+            const subj = allSubjects.find(s => s.id === sId);
+            if (subj) {
+                document.getElementById('aHours').value = (subj.theory_hours + subj.practice_hours) || 4;
+            }
+        }
+
+        function openAssignmentModal() {
+            document.getElementById('modalAssignTitle').textContent = 'มอบหมายการสอน';
+            document.getElementById('assignForm').reset();
+            document.getElementById('assignId').value = '';
+            document.getElementById('assignmentModal').classList.add('show');
+        }
+
+        function editAssignment(id) {
+            const a = allAssignments.find(item => item.id === id);
+            if (!a) return;
+
+            document.getElementById('modalAssignTitle').textContent = 'แก้ไขการมอบหมายการสอน';
+            document.getElementById('assignId').value = a.id;
+            document.getElementById('aTeacherId').value = a.teacher_id;
+            document.getElementById('aSubjectId').value = a.subject_id;
+            document.getElementById('aGroupId').value = a.student_group_id;
+            document.getElementById('aHours').value = a.hours_per_week;
+            document.getElementById('aPreferredRoom').value = a.preferred_room_id || '';
+            document.getElementById('aNotes').value = a.notes || '';
+
+            document.getElementById('assignmentModal').classList.add('show');
+        }
+
+        async function saveAssignment(e) {
+            e.preventDefault();
+            const id = document.getElementById('assignId').value;
+            const body = {
+                teacher_id: parseInt(document.getElementById('aTeacherId').value),
+                subject_id: parseInt(document.getElementById('aSubjectId').value),
+                student_group_id: parseInt(document.getElementById('aGroupId').value),
+                semester_id: currentSemesterId,
+                hours_per_week: parseInt(document.getElementById('aHours').value),
+                preferred_room_id: document.getElementById('aPreferredRoom').value ? parseInt(document.getElementById('aPreferredRoom').value) : null,
+                notes: document.getElementById('aNotes').value.trim()
+            };
+
+            try {
+                if (id) {
+                    await apiCall(`/assignments/teaching-assignments/${id}`, { method: 'PUT', body });
+                    showToast('แก้ไขการมอบหมายสำเร็จ', 'success');
+                } else {
+                    await apiCall('/assignments/teaching-assignments', { method: 'POST', body });
+                    showToast('มอบหมายการสอนสำเร็จ', 'success');
+                }
+                closeModal('assignmentModal');
+                await loadAssignments();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteAssignment(id) {
+            showConfirmDialog('ยืนยันการลบการมอบหมาย', 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการมอบหมายนี้?', async () => {
+                try {
+                    await apiCall(`/assignments/teaching-assignments/${id}`, { method: 'DELETE' });
+                    showToast('ลบรายการมอบหมายแล้ว', 'info');
+                    await loadAssignments();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        // ================= Tab 2: Groups =================
+        async function loadGroups() {
+            try {
+                allGroups = await apiCall(`/assignments/student-groups?semester_id=${currentSemesterId}`);
+                const tbody = document.getElementById('groupsTableBody');
+                tbody.innerHTML = allGroups.map(g => `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700;">${g.code}</td>
+                        <td><strong>${g.name}</strong></td>
+                        <td>${g.level} ${g.program_name}</td>
+                        <td>ชั้นปีที่ ${g.year_level}</td>
+                        <td style="text-align: center;"><span class="badge badge-secondary">${g.student_count} คน</span></td>
+                        <td style="text-align: center;">
+                            <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        function openGroupModal() {
+            document.getElementById('groupForm').reset();
+            document.getElementById('groupModal').classList.add('show');
+        }
+
+        async function saveGroup(e) {
+            e.preventDefault();
+            const body = {
+                code: document.getElementById('gCode').value.trim(),
+                name: document.getElementById('gName').value.trim(),
+                program_id: parseInt(document.getElementById('gProgId').value),
+                year_level: parseInt(document.getElementById('gYearLevel').value),
+                student_count: parseInt(document.getElementById('gStudentCount').value),
+                semester_id: currentSemesterId
+            };
+
+            try {
+                await apiCall('/assignments/student-groups', { method: 'POST', body });
+                showToast('เพิ่มกลุ่มเรียนสำเร็จ', 'success');
+                closeModal('groupModal');
+                loadGroups();
+                allGroups = await apiCall(`/assignments/student-groups?semester_id=${currentSemesterId}`);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteGroup(id) {
+            showConfirmDialog('ยืนยันการลบกลุ่มเรียน', 'คุณแน่ใจหรือไม่ว่าต้องการลบกลุ่มเรียนนี้?', async () => {
+                try {
+                    await apiCall(`/assignments/student-groups/${id}`, { method: 'DELETE' });
+                    showToast('ลบกลุ่มเรียนสำเร็จ', 'info');
+                    loadGroups();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        // ================= Tab 3: Programs =================
+        async function loadPrograms() {
+            try {
+                allPrograms = await apiCall('/assignments/programs');
+                const tbody = document.getElementById('programsTableBody');
+                tbody.innerHTML = allPrograms.map(p => `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700;">${p.code}</td>
+                        <td><strong>${p.name}</strong></td>
+                        <td><span class="badge badge-info">${p.level}</span></td>
+                        <td>${p.department_name || '-'}</td>
+                        <td style="text-align: center;">${p.duration_years} ปี</td>
+                    </tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        // ================= Tab 4: Departments =================
+        async function loadDepartments() {
+            try {
+                allDepts = await apiCall('/assignments/departments');
+                const tbody = document.getElementById('deptsTableBody');
+                tbody.innerHTML = allDepts.map(d => `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700;">${d.code}</td>
+                        <td><strong>${d.name}</strong></td>
+                        <td style="color: #64748b;">${d.description || '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานและการนำเข้าข้อมูล | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .nav-tab-btn {
+            padding: 10px 18px;
+            background: none;
+            border: none;
+            font-family: var(--font-heading);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: var(--transition);
+        }
+
+        .nav-tab-btn:hover { color: var(--primary); }
+        .nav-tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .progress-bar-bg {
+            background-color: #e2e8f0;
+            border-radius: var(--radius-full);
+            height: 10px;
+            width: 100px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            background-color: #2563eb;
+        }
+
+        .dropzone {
+            border: 2px dashed #94a3b8;
+            border-radius: var(--radius-lg);
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #f8fafc;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dropzone:hover {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html" class="active"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>รายงานสรุปและการนำเข้าข้อมูล (Reports & Import)</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลด...</span>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <button class="nav-tab-btn active" onclick="switchTab('tabWorkload')">👨‍🏫 ภาระงานสอนครู</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabRooms')">🏢 การใช้งานห้องเรียน</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabUnscheduled')">⚠️ วิชาที่ยังจัดไม่ได้</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabConflicts')">🔍 ข้อขัดแย้งตาราง</button>
+                    <button class="nav-tab-btn" onclick="switchTab('tabImport')">📥 นำเข้า Excel</button>
+                </div>
+
+                <!-- Tab 1: Teacher Workload -->
+                <div class="tab-content active" id="tabWorkload">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>รายงานภาระงานสอนรายสัปดาห์</h3>
+                            <button class="btn btn-sm btn-outline" onclick="exportWorkloadExcel()">📊 ดาวน์โหลด Excel</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัส</th>
+                                            <th>ชื่อ-นามสกุล</th>
+                                            <th>แผนกวิชา</th>
+                                            <th style="text-align: center;">จำนวนวิชา</th>
+                                            <th style="text-align: center;">ชม. ที่มอบหมาย</th>
+                                            <th style="text-align: center;">ชม. จัดในตาราง</th>
+                                            <th style="text-align: center;">เกณฑ์สูงสุด</th>
+                                            <th style="text-align: center;">สถานะภาระงาน</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="workloadTableBody">
+                                        <tr><td colspan="8" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Classroom Utilization -->
+                <div class="tab-content" id="tabRooms">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>รายงานอัตราการใช้งานห้องเรียน (Classroom Utilization Rate)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสห้อง</th>
+                                            <th>ชื่อห้องเรียน</th>
+                                            <th>ประเภทห้อง</th>
+                                            <th>อาคาร</th>
+                                            <th style="text-align: center;">ความจุ</th>
+                                            <th style="text-align: center;">คาบที่ใช้งาน</th>
+                                            <th>อัตราการใช้งาน (Utilization)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="roomsUtilTableBody">
+                                        <tr><td colspan="7" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Unscheduled Subjects -->
+                <div class="tab-content" id="tabUnscheduled">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>รายวิชาที่ยังจัดลงตารางไม่ครบตามหลักสูตร</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสวิชา</th>
+                                            <th>ชื่อรายวิชา</th>
+                                            <th>ครูผู้สอน</th>
+                                            <th>กลุ่มเรียน</th>
+                                            <th style="text-align: center;">ชม. ตามแผน</th>
+                                            <th style="text-align: center;">จัดได้แล้ว</th>
+                                            <th style="text-align: center;">ขาดอีก (คาบ)</th>
+                                            <th>สาเหตุที่เป็นไปได้</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="unscheduledTableBody">
+                                        <tr><td colspan="8" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Conflicts Audit -->
+                <div class="tab-content" id="tabConflicts">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>ตรวจสอบข้อขัดแย้งของตารางสอน (Conflict Audit)</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="conflictAuditContent">
+                                <p style="color: #64748b;">กำลังตรวจสอบข้อขัดแย้ง...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Import Excel -->
+                <div class="tab-content" id="tabImport">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>นำเข้าข้อมูลผ่านไฟล์ Microsoft Excel (.xlsx, .xls)</h3>
+                        </div>
+                        <div class="card-body" style="max-width: 600px; margin: 0 auto;">
+                            <form id="importForm" onsubmit="handleImportExcel(event)">
+                                <div class="form-group">
+                                    <label class="form-label">เลือกประเภทข้อมูลที่ต้องการนำเข้า *</label>
+                                    <select id="importEntityType" class="form-select" required>
+                                        <option value="teachers">ครูผู้สอน (คอลัมน์: รหัส, ชื่อ, นามสกุล, แผนก, โทรศัพท์)</option>
+                                        <option value="subjects">รายวิชา (คอลัมน์: รหัสวิชา, ชื่อวิชา, หน่วยกิต, ชั่วโมงทฤษฎี, ชั่วโมงปฏิบัติ)</option>
+                                        <option value="classrooms">ห้องเรียน (คอลัมน์: รหัสห้อง, ชื่อห้อง, อาคาร, ความจุ, ประเภท)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">เลือกไฟล์ Excel</label>
+                                    <div class="dropzone" onclick="document.getElementById('excelFileInput').click()">
+                                        <div style="font-size: 36px; margin-bottom: 8px;">📂</div>
+                                        <div style="font-weight: 600; color: #1e3a8a;" id="fileNameDisplay">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</div>
+                                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">รองรับเฉพาะไฟล์ .xlsx และ .xls ขนาดไม่เกิน 10MB</div>
+                                        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="onFileSelected(event)">
+                                    </div>
+                                </div>
+
+                                <div id="importResultBox" style="display: none; padding: 14px; border-radius: var(--radius-md); margin-bottom: 16px;"></div>
+
+                                <button type="submit" id="btnSubmitImport" class="btn btn-primary" style="width: 100%; padding: 12px;">
+                                    🚀 เริ่มต้นการนำเข้าข้อมูล
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let currentSemesterId = null;
+        let activeVersionId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            const semester = await loadCurrentSemester();
+            if (semester) {
+                currentSemesterId = semester.id;
+                await loadActiveVersion();
+                await loadWorkload();
+            }
+        });
+
+        async function loadActiveVersion() {
+            try {
+                const versions = await apiCall(`/timetable/versions?semester_id=${currentSemesterId}`);
+                if (versions.length > 0) {
+                    const pub = versions.find(v => v.status === 'published');
+                    activeVersionId = pub ? pub.id : versions[0].id;
+                }
+            } catch (e) {}
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            if (tabId === 'tabWorkload') loadWorkload();
+            if (tabId === 'tabRooms') loadRoomUtilization();
+            if (tabId === 'tabUnscheduled') loadUnscheduled();
+            if (tabId === 'tabConflicts') loadConflictsReport();
+        }
+
+        // ================= Tab 1: Workload =================
+        async function loadWorkload() {
+            try {
+                const data = await apiCall(`/reports/teacher-workload?semester_id=${currentSemesterId}`);
+                const tbody = document.getElementById('workloadTableBody');
+                
+                if (!data.teachers || data.teachers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">ไม่มีข้อมูล</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.teachers.map(t => {
+                    const isOverload = t.total_assigned_hours > t.max_hours_per_week;
+                    const statusBadge = isOverload ? 
+                        '<span class="badge badge-danger">⚠️ เกินภาระ</span>' : 
+                        '<span class="badge badge-success">✓ ปกติ</span>';
+
+                    return `
+                        <tr>
+                            <td style="font-family: monospace;">${t.employee_id}</td>
+                            <td><strong>${t.prefix || ''}${t.first_name} ${t.last_name}</strong></td>
+                            <td><span class="badge badge-secondary">${t.department_name || '-'}</span></td>
+                            <td style="text-align: center;">${t.total_assignments} วิชา</td>
+                            <td style="text-align: center; font-weight: 700; ${isOverload ? 'color: #dc2626;' : ''}">${t.total_assigned_hours} ชม.</td>
+                            <td style="text-align: center;">${t.total_scheduled_hours} คาบ</td>
+                            <td style="text-align: center;">${t.max_hours_per_week} ชม.</td>
+                            <td style="text-align: center;">${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function exportWorkloadExcel() {
+            window.open(`/api/reports/export/teacher-workload/excel?semester_id=${currentSemesterId}`, '_blank');
+        }
+
+        // ================= Tab 2: Classroom Utilization =================
+        async function loadRoomUtilization() {
+            if (!activeVersionId) return;
+            try {
+                const data = await apiCall(`/reports/classroom-utilization?version_id=${activeVersionId}`);
+                const tbody = document.getElementById('roomsUtilTableBody');
+
+                if (!data.classrooms || data.classrooms.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">ไม่มีข้อมูล</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.classrooms.map(r => `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700;">${r.code}</td>
+                        <td><strong>${r.name}</strong></td>
+                        <td><span class="badge badge-info">${r.room_type}</span></td>
+                        <td>${r.building || '-'}</td>
+                        <td style="text-align: center;">${r.capacity} คน</td>
+                        <td style="text-align: center;"><strong>${r.used_slots}</strong> / ${data.totalSlotsPerWeek} คาบ</td>
+                        <td>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: ${Math.min(100, r.utilization_rate)}%;"></div>
+                            </div>
+                            <strong>${r.utilization_rate}%</strong>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ================= Tab 3: Unscheduled =================
+        async function loadUnscheduled() {
+            if (!activeVersionId) return;
+            try {
+                const data = await apiCall(`/reports/unscheduled-subjects?version_id=${activeVersionId}`);
+                const tbody = document.getElementById('unscheduledTableBody');
+
+                if (!data.items || data.items.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #166534; padding: 30px;">
+                                🎉 ยอดเยี่ยม! ทุกรายวิชาได้รับการจัดลงตารางครบ 100% แล้ว (ไม่มีวิชาค้าง)
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = data.items.map(i => `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700; color: #1e3a8a;">${i.subject_code}</td>
+                        <td><strong>${i.subject_name}</strong></td>
+                        <td>${i.teacher_prefix || ''}${i.teacher_first_name} ${i.teacher_last_name}</td>
+                        <td><span class="badge badge-info">${i.group_name}</span></td>
+                        <td style="text-align: center;">${i.hours_per_week} คาบ</td>
+                        <td style="text-align: center;">${i.scheduled_count} คาบ</td>
+                        <td style="text-align: center; color: #dc2626; font-weight: 700;">${i.missingHours} คาบ</td>
+                        <td style="font-size: 13px; color: #64748b;">${i.possibleReason}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ================= Tab 4: Conflicts =================
+        async function loadConflictsReport() {
+            if (!activeVersionId) return;
+            const container = document.getElementById('conflictAuditContent');
+            try {
+                const rep = await apiCall(`/reports/conflicts?version_id=${activeVersionId}`);
+                if (rep.totalConflicts === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; background: #f0fdf4; border-radius: var(--radius-md); border: 1px solid #bbf7d0;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+                            <h3 style="color: #15803d; font-size: 18px;">ตารางสอนสมบูรณ์แบบ ปราศจากข้อขัดแย้ง</h3>
+                            <p style="color: #166534; font-size: 14px; margin-top: 4px;">
+                                ไม่มีครูสอนซ้อนเวลา ไม่มีห้องเรียนชนกัน และไม่มีกลุ่มเรียนที่ชนเวลาเรียน
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div style="margin-bottom: 16px; display: flex; gap: 12px;">
+                        <span class="badge badge-danger" style="font-size: 13px; padding: 6px 14px;">
+                            ข้อขัดแย้งรุนแรง (Hard): ${rep.hardConflicts}
+                        </span>
+                        <span class="badge badge-warning" style="font-size: 13px; padding: 6px 14px;">
+                            ข้อขัดแย้งปานกลาง (Soft): ${rep.softConflicts}
+                        </span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ประเภท</th>
+                                    <th>ความรุนแรง</th>
+                                    <th>รายละเอียดข้อขัดแย้ง</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rep.conflicts.map(c => `
+                                    <tr>
+                                        <td><strong>${c.type}</strong></td>
+                                        <td><span class="badge ${c.severity === 'hard' ? 'badge-danger' : 'badge-warning'}">${c.severity}</span></td>
+                                        <td style="color: #991b1b;">${c.message}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ================= Tab 5: Import Excel =================
+        function onFileSelected(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('fileNameDisplay').textContent = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            }
+        }
+
+        async function handleImportExcel(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('excelFileInput');
+            const entityType = document.getElementById('importEntityType').value;
+            const resultBox = document.getElementById('importResultBox');
+            const btn = document.getElementById('btnSubmitImport');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast('กรุณาเลือกไฟล์ Excel', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            btn.disabled = true;
+            btn.textContent = '⏳ กำลังนำเข้าข้อมูล...';
+            resultBox.style.display = 'none';
+
+            try {
+                const res = await apiCall(`/reports/import/${entityType}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                resultBox.style.display = 'block';
+                resultBox.style.backgroundColor = '#dcfce7';
+                resultBox.style.color = '#15803d';
+                resultBox.innerHTML = `
+                    <h4>✅ นำเข้าข้อมูลเรียบร้อย</h4>
+                    <p>${res.message}</p>
+                `;
+
+                if (res.results && res.results.errors && res.results.errors.length > 0) {
+                    resultBox.innerHTML += `
+                        <div style="margin-top: 10px; color: #b91c1c;">
+                            <strong>รายการที่พบข้อผิดพลาด (${res.results.errors.length}):</strong>
+                            <ul>
+                                ${res.results.errors.map(err => `<li>แถวที่ ${err.row}: ${err.error}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                showToast('นำเข้าข้อมูลสำเร็จ', 'success');
+            } catch (err) {
+                resultBox.style.display = 'block';
+                resultBox.style.backgroundColor = '#fee2e2';
+                resultBox.style.color = '#991b1b';
+                resultBox.innerHTML = `❌ เกิดข้อผิดพลาด: ${err.message}`;
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 เริ่มต้นการนำเข้าข้อมูล';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ด | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="active"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>ภาพรวมระบบ (Dashboard)</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลดภาคเรียน...</span>
+                </div>
+                <div class="topbar-actions">
+                    <a href="timetable.html" class="btn btn-primary">
+                        <span>⚡</span> ไปยังตารางสอน
+                    </a>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                <!-- Welcome Banner -->
+                <div class="card" style="background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%); color: white; border: none; margin-bottom: 28px;">
+                    <div class="card-body" style="padding: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                        <div>
+                            <h2 style="color: #ffffff; font-size: 22px; margin-bottom: 6px;">ระบบจัดตารางสอนอัจฉริยะ วิทยาลัยการอาชีพปัตตานี</h2>
+                            <p style="color: #e0f2fe; font-size: 14px; max-width: 600px;">
+                                ขับเคลื่อนด้วยอัลกอริทึม Constraint Satisfaction Problem (CSP) ร่วมกับ MRV Heuristic เพื่อจัดตารางเรียน-ตารางสอนที่สมดุล ปราศจากข้อขัดแย้ง 100%
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <a href="timetable.html" class="btn" style="background: #ffffff; color: #1e3a8a; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                🚀 จัดตารางอัตโนมัติ
+                            </a>
+                            <a href="reports.html" class="btn" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4);">
+                                📥 นำเข้า / ส่งออกข้อมูล
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">👨‍🏫</div>
+                        <div class="stat-info">
+                            <h3 id="statTeachers">0</h3>
+                            <p>ครูผู้สอนทั้งหมด</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon emerald">📚</div>
+                        <div class="stat-info">
+                            <h3 id="statSubjects">0</h3>
+                            <p>รายวิชาในระบบ</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">🏢</div>
+                        <div class="stat-info">
+                            <h3 id="statClassrooms">0</h3>
+                            <p>ห้องเรียน / โรงฝึกงาน</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon amber">👥</div>
+                        <div class="stat-info">
+                            <h3 id="statGroups">0</h3>
+                            <p>กลุ่มเรียนในภาคนี้</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon rose">📝</div>
+                        <div class="stat-info">
+                            <h3 id="statAssignments">0</h3>
+                            <p>รายการมอบหมายสอน</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2-Column Content Layout -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px;">
+                    <!-- Timetable Status Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📅 สถานะตารางสอนปัจจุบัน</h3>
+                            <span class="badge badge-primary" id="badgeVersionStatus">เวอร์ชัน</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="timetableStatusContent">
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #f8fafc; border-radius: var(--radius-md); margin-bottom: 16px;">
+                                    <div>
+                                        <h4 id="currentVersionName" style="font-size: 15px; color: #1e293b;">กำลังตรวจสอบ...</h4>
+                                        <p id="currentVersionDesc" style="font-size: 12px; color: #64748b; margin-top: 2px;">-</p>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span id="qualityScoreBadge" style="font-size: 20px; font-weight: 700; color: #10b981;">100%</span>
+                                        <div style="font-size: 11px; color: #64748b;">คะแนนคุณภาพ</div>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align: center;">
+                                    <div style="padding: 12px; background: #f0fdf4; border-radius: var(--radius-md); border: 1px solid #bbf7d0;">
+                                        <div style="font-size: 18px; font-weight: 700; color: #15803d;" id="statScheduledSlots">0</div>
+                                        <div style="font-size: 11px; color: #166534;">จัดสำเร็จแล้ว (คาบ)</div>
+                                    </div>
+                                    <div style="padding: 12px; background: #fffbeb; border-radius: var(--radius-md); border: 1px solid #fde68a;">
+                                        <div style="font-size: 18px; font-weight: 700; color: #b45309;" id="statUnscheduledSlots">0</div>
+                                        <div style="font-size: 11px; color: #92400e;">ยังไม่จัด (คาบ)</div>
+                                    </div>
+                                    <div style="padding: 12px; background: #fef2f2; border-radius: var(--radius-md); border: 1px solid #fecaca;">
+                                        <div style="font-size: 18px; font-weight: 700; color: #b91c1c;" id="statConflictsCount">0</div>
+                                        <div style="font-size: 11px; color: #991b1b;">ข้อขัดแย้ง (ชน)</div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                                    <a href="timetable.html" class="btn btn-primary" style="flex: 1;">เปิดดูตารางสอนฉบับเต็ม</a>
+                                    <a href="reports.html" class="btn btn-secondary">ดูรายงาน</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Department Overview -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🏢 แผนกวิชาและบุคลากร</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อแผนกวิชา</th>
+                                            <th style="text-align: center;">จำนวนครู</th>
+                                            <th style="text-align: center;">จำนวนวิชา</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="departmentTableBody">
+                                        <tr><td colspan="3" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities (Audit Log) -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3>📜 ประวัติกิจกรรมล่าสุด (Audit Logs)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>วัน-เวลา</th>
+                                        <th>ผู้ดำเนินการ</th>
+                                        <th>การกระทำ</th>
+                                        <th>ตาราง/ข้อมูล</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogsBody">
+                                    <tr><td colspan="4" style="text-align: center;">กำลังโหลดประวัติ...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            loadCurrentSemester();
+            loadDashboardData();
+        });
+
+        async function loadDashboardData() {
+            try {
+                const data = await apiCall('/assignments/dashboard');
+                
+                document.getElementById('statTeachers').textContent = data.teachers || 0;
+                document.getElementById('statSubjects').textContent = data.subjects || 0;
+                document.getElementById('statClassrooms').textContent = data.classrooms || 0;
+                document.getElementById('statGroups').textContent = data.studentGroups || 0;
+                document.getElementById('statAssignments').textContent = data.assignments || 0;
+
+                // ตรวจสอบ Version
+                const versions = data.versions || [];
+                const latestVersion = versions[0];
+                if (latestVersion) {
+                    document.getElementById('currentVersionName').textContent = latestVersion.name;
+                    document.getElementById('currentVersionDesc').textContent = `เวอร์ชันที่ ${latestVersion.version_number} • สร้างเมื่อ ${latestVersion.created_at || '-'}`;
+                    document.getElementById('badgeVersionStatus').textContent = latestVersion.status === 'published' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง';
+                    document.getElementById('badgeVersionStatus').className = `badge ${latestVersion.status === 'published' ? 'badge-success' : 'badge-warning'}`;
+                    document.getElementById('qualityScoreBadge').textContent = `${(latestVersion.quality_score || 100).toFixed(0)}%`;
+                    document.getElementById('statScheduledSlots').textContent = latestVersion.total_scheduled || 0;
+                    document.getElementById('statUnscheduledSlots').textContent = latestVersion.total_unscheduled || 0;
+                    document.getElementById('statConflictsCount').textContent = latestVersion.total_conflicts || 0;
+                } else {
+                    document.getElementById('currentVersionName').textContent = 'ยังไม่มีเวอร์ชันตาราง';
+                    document.getElementById('currentVersionDesc').textContent = 'สามารถสร้างเวอร์ชันและจัดตารางอัตโนมัติได้ทันที';
+                }
+
+                // แผนกวิชา
+                const deptBody = document.getElementById('departmentTableBody');
+                if (data.departmentStats && data.departmentStats.length > 0) {
+                    deptBody.innerHTML = data.departmentStats.map(d => `
+                        <tr>
+                            <td><strong>${d.name}</strong></td>
+                            <td style="text-align: center;"><span class="badge badge-primary">${d.teacher_count} คน</span></td>
+                            <td style="text-align: center;"><span class="badge badge-secondary">${d.subject_count} วิชา</span></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    deptBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">ไม่มีข้อมูล</td></tr>';
+                }
+
+                // Audit Logs
+                const logBody = document.getElementById('auditLogsBody');
+                if (data.recentLogs && data.recentLogs.length > 0) {
+                    const actionNames = {
+                        login: 'เข้าสู่ระบบ',
+                        logout: 'ออกจากระบบ',
+                        create: 'เพิ่มข้อมูลใหม่',
+                        update: 'แก้ไขข้อมูล',
+                        delete: 'ลบข้อมูล',
+                        generate_timetable: 'สั่งจัดตารางสอนอัตโนมัติ',
+                        publish: 'เผยแพร่ตารางสอน',
+                        duplicate: 'คัดลอกเวอร์ชัน'
+                    };
+
+                    logBody.innerHTML = data.recentLogs.map(l => `
+                        <tr>
+                            <td style="color: #64748b; font-size: 12px;">${l.created_at}</td>
+                            <td><strong>${l.user_name || 'ระบบ'}</strong></td>
+                            <td><span class="badge badge-info">${actionNames[l.action] || l.action}</span></td>
+                            <td style="font-family: monospace; font-size: 12px; color: #475569;">${l.table_name || '-'}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    logBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">ยังไม่มีประวัติกิจกรรม</td></tr>';
+                }
+
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

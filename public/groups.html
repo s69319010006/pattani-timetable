@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการข้อมูลกลุ่มเรียนและระดับชั้น | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tabs-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover {
+            color: var(--primary-color);
+            background-color: rgba(30, 58, 138, 0.05);
+        }
+        .tab-btn.active {
+            color: var(--primary-color);
+            background-color: rgba(30, 58, 138, 0.1);
+        }
+        .tab-btn .badge {
+            font-size: 11px;
+            padding: 2px 8px;
+        }
+        .auto-suggest-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .badge-level-vc {
+            background: #dbeafe;
+            color: #1e40af;
+            font-weight: 600;
+        }
+        .badge-level-dip {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html" class="active"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>จัดการข้อมูลกลุ่มเรียนและระดับชั้น (Student Groups & Levels)</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลด...</span>
+                </div>
+                <div class="topbar-actions" style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="openProgramModal()">
+                        <span>📚</span> จัดการสาขาวิชา
+                    </button>
+                    <button class="btn btn-primary" onclick="openGroupModal()">
+                        <span>➕</span> เพิ่มกลุ่มเรียน
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <!-- Stats Overview -->
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">👥</div>
+                        <div class="stat-info">
+                            <h3 id="statTotalGroups">0</h3>
+                            <p>กลุ่มเรียนทั้งหมด</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon emerald">🎓</div>
+                        <div class="stat-info">
+                            <h3 id="statTotalStudents">0</h3>
+                            <p>นักเรียนทั้งหมด (คน)</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">📘</div>
+                        <div class="stat-info">
+                            <h3 id="statVcGroups">0</h3>
+                            <p>ระดับ ปวช. (<span id="statVcStudents">0</span> คน)</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon amber">📙</div>
+                        <div class="stat-info">
+                            <h3 id="statDipGroups">0</h3>
+                            <p>ระดับ ปวส. (<span id="statDipStudents">0</span> คน)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="tabs-header">
+                    <button class="tab-btn active" id="tabBtnGroups" onclick="switchTab('groups')">
+                        👥 รายชื่อกลุ่มเรียน
+                        <span class="badge badge-secondary" id="tabBadgeGroups">0</span>
+                    </button>
+                    <button class="tab-btn" id="tabBtnPrograms" onclick="switchTab('programs')">
+                        🎓 สาขาวิชาและระดับชั้น (ปวช./ปวส.)
+                        <span class="badge badge-secondary" id="tabBadgePrograms">0</span>
+                    </button>
+                </div>
+
+                <!-- TAB 1: Groups View -->
+                <div id="tabGroupsContent">
+                    <div class="card">
+                        <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
+                            <h3 style="margin: 0;">รายชื่อกลุ่มเรียนประจำภาคเรียน</h3>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                <input type="text" id="searchGroup" class="form-control" placeholder="ค้นหารหัส / ชื่อกลุ่ม / สาขา..." style="width: 220px;" oninput="filterGroups()">
+                                
+                                <select id="filterLevel" class="form-select" style="width: 130px;" onchange="filterGroups()">
+                                    <option value="">ทุกระดับชั้น</option>
+                                    <option value="ปวช.">ปวช.</option>
+                                    <option value="ปวส.">ปวส.</option>
+                                </select>
+
+                                <select id="filterProgram" class="form-select" style="width: 180px;" onchange="filterGroups()">
+                                    <option value="">-- ทุกสาขาวิชา --</option>
+                                </select>
+
+                                <select id="filterYearLevel" class="form-select" style="width: 120px;" onchange="filterGroups()">
+                                    <option value="">ทุกชั้นปี</option>
+                                    <option value="1">ชั้นปีที่ 1</option>
+                                    <option value="2">ชั้นปีที่ 2</option>
+                                    <option value="3">ชั้นปีที่ 3</option>
+                                    <option value="4">ชั้นปีที่ 4</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสกลุ่ม</th>
+                                            <th>ชื่อกลุ่มเรียน</th>
+                                            <th style="text-align: center;">ระดับชั้น</th>
+                                            <th>สาขาวิชา / แผนกวิชา</th>
+                                            <th style="text-align: center;">ชั้นปี / กลุ่ม</th>
+                                            <th style="text-align: center;">จำนวนนักเรียน</th>
+                                            <th>ภาคเรียน</th>
+                                            <th style="text-align: center;">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="groupsTableBody">
+                                        <tr><td colspan="8" style="text-align: center;">กำลังโหลดข้อมูลกลุ่มเรียน...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Programs View -->
+                <div id="tabProgramsContent" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3 style="margin: 0;">สาขาวิชาและหลักสูตรระดับชั้น (ปวช. / ปวส.)</h3>
+                                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">หลักสูตรการศึกษาตามโครงสร้างของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="openProgramModal()">
+                                <span>➕</span> เพิ่มสาขาวิชา
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>รหัสหลักสูตร</th>
+                                            <th>ชื่อสาขาวิชา</th>
+                                            <th style="text-align: center;">ระดับการศึกษา</th>
+                                            <th>แผนกวิชาที่สังกัด</th>
+                                            <th style="text-align: center;">ระยะเวลาศึกษา</th>
+                                            <th style="text-align: center;">กลุ่มเรียนที่มี</th>
+                                            <th style="text-align: center;">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="programsTableBody">
+                                        <tr><td colspan="7" style="text-align: center;">กำลังโหลดข้อมูลสาขาวิชา...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: เพิ่ม / แก้ไข กลุ่มเรียน -->
+    <div class="modal-backdrop" id="groupModal">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="modalGroupTitle">เพิ่มกลุ่มเรียน</h3>
+                <button class="modal-close" onclick="closeModal('groupModal')">✕</button>
+            </div>
+            <form id="groupForm" onsubmit="saveGroup(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="groupId">
+
+                    <div class="form-group">
+                        <label class="form-label">สาขาวิชาและระดับชั้น *</label>
+                        <select id="gProgId" class="form-select" required onchange="suggestGroupNameAndCode()">
+                            <option value="">-- เลือกสาขาวิชา --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">ระดับชั้นปี *</label>
+                            <select id="gYearLevel" class="form-select" required onchange="suggestGroupNameAndCode()">
+                                <option value="1">ปี 1</option>
+                                <option value="2">ปี 2</option>
+                                <option value="3">ปี 3</option>
+                                <option value="4">ปี 4</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">กลุ่มที่ *</label>
+                            <input type="number" id="gGroupNumber" class="form-control" value="1" min="1" max="9" required oninput="suggestGroupNameAndCode()">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">จำนวนนักเรียน (คน)</label>
+                            <input type="number" id="gStudentCount" class="form-control" value="30" min="1" max="60" required>
+                        </div>
+                    </div>
+
+                    <!-- แถบแนะนำอัตโนมัติ -->
+                    <div class="auto-suggest-box">
+                        <span>💡 ระบบสร้างชื่อและรหัสให้อัตโนมัติ:</span>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="applySuggestion()">
+                            ✨ นำไปใช้
+                        </button>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">รหัสกลุ่มเรียน *</label>
+                            <input type="text" id="gCode" class="form-control" placeholder="เช่น บช.67.1, ชย.67.1" required>
+                            <small style="color: var(--text-muted); font-size: 11px;">ใช้แสดงย่อในตารางสอน</small>
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label class="form-label">ชื่อกลุ่มเรียนเต็ม *</label>
+                            <input type="text" id="gName" class="form-control" placeholder="เช่น ปวช.1 การบัญชี กลุ่ม 1" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ภาคเรียน</label>
+                        <select id="gSemesterId" class="form-select">
+                            <!-- โหลดภาคเรียน -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('groupModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: เพิ่ม / แก้ไข สาขาวิชา -->
+    <div class="modal-backdrop" id="programModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="modalProgramTitle">เพิ่มสาขาวิชา / หลักสูตร</h3>
+                <button class="modal-close" onclick="closeModal('programModal')">✕</button>
+            </div>
+            <form id="programForm" onsubmit="saveProgram(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="programId">
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">ระดับการศึกษา *</label>
+                            <select id="pLevel" class="form-select" required onchange="handleLevelChange()">
+                                <option value="ปวช.">ปวช. (ประกาศนียบัตรวิชาชีพ)</option>
+                                <option value="ปวส.">ปวส. (ประกาศนียบัตรวิชาชีพชั้นสูง)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">รหัสหลักสูตร *</label>
+                            <input type="text" id="pCode" class="form-control" placeholder="เช่น P-AUTO-3" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ชื่อสาขาวิชา *</label>
+                        <input type="text" id="pName" class="form-control" placeholder="เช่น ช่างยนต์, การบัญชี" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label class="form-label">แผนกวิชาที่สังกัด</label>
+                            <select id="pDeptId" class="form-select">
+                                <option value="">-- ไม่ระบุแผนกวิชา --</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">ระยะเวลา (ปี)</label>
+                            <input type="number" id="pDuration" class="form-control" value="3" min="1" max="4" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('programModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allGroups = [];
+        let allPrograms = [];
+        let allDepartments = [];
+        let allSemesters = [];
+        let currentSemesterId = null;
+        let suggestedCode = '';
+        let suggestedName = '';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            const sem = await loadCurrentSemester();
+            if (sem) currentSemesterId = sem.id;
+
+            await loadSemestersList();
+            await loadDepartments();
+            await loadPrograms();
+            await loadGroups();
+            await loadStats();
+        });
+
+        // 1. โหลดสถิติสรุป
+        async function loadStats() {
+            try {
+                const stats = await apiCall(`/groups/stats${currentSemesterId ? '?semester_id=' + currentSemesterId : ''}`);
+                document.getElementById('statTotalGroups').textContent = stats.totalGroups;
+                document.getElementById('statTotalStudents').textContent = stats.totalStudents.toLocaleString();
+                document.getElementById('statVcGroups').textContent = `${stats.vcGroups} กลุ่ม`;
+                document.getElementById('statVcStudents').textContent = stats.vcStudents.toLocaleString();
+                document.getElementById('statDipGroups').textContent = `${stats.dipGroups} กลุ่ม`;
+                document.getElementById('statDipStudents').textContent = stats.dipStudents.toLocaleString();
+                document.getElementById('tabBadgeGroups').textContent = stats.totalGroups;
+                document.getElementById('tabBadgePrograms').textContent = stats.totalPrograms;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // 2. โหลดรายการภาคเรียน
+        async function loadSemestersList() {
+            try {
+                allSemesters = await apiCall('/assignments/semesters');
+                const semSelect = document.getElementById('gSemesterId');
+                semSelect.innerHTML = allSemesters.map(s => 
+                    `<option value="${s.id}" ${s.is_current ? 'selected' : ''}>${s.name} (${s.year})</option>`
+                ).join('');
+            } catch (e) {}
+        }
+
+        // 3. โหลดแผนกวิชา
+        async function loadDepartments() {
+            try {
+                allDepartments = await apiCall('/assignments/departments');
+                const pDept = document.getElementById('pDeptId');
+                pDept.innerHTML = '<option value="">-- ไม่ระบุแผนกวิชา --</option>' + 
+                    allDepartments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            } catch (e) {}
+        }
+
+        // 4. โหลดสาขาวิชา
+        async function loadPrograms() {
+            try {
+                allPrograms = await apiCall('/groups/programs');
+                
+                // อัปเดต dropdown ตัวกรอง
+                const filterProg = document.getElementById('filterProgram');
+                filterProg.innerHTML = '<option value="">-- ทุกสาขาวิชา --</option>' + 
+                    allPrograms.map(p => `<option value="${p.id}">[${p.level}] ${p.name}</option>`).join('');
+
+                // อัปเดต dropdown ในฟอร์มกลุ่มเรียน
+                const gProg = document.getElementById('gProgId');
+                gProg.innerHTML = '<option value="">-- เลือกสาขาวิชา --</option>' + 
+                    allPrograms.map(p => `<option value="${p.id}" data-level="${p.level}" data-name="${p.name}">[${p.level}] ${p.name}</option>`).join('');
+
+                renderPrograms(allPrograms);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // 5. โหลดกลุ่มเรียน
+        async function loadGroups() {
+            try {
+                let url = '/groups';
+                if (currentSemesterId) url += `?semester_id=${currentSemesterId}`;
+                allGroups = await apiCall(url);
+                renderGroups(allGroups);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // แสดงผลตารางกลุ่มเรียน
+        function renderGroups(groups) {
+            const tbody = document.getElementById('groupsTableBody');
+            if (!groups || groups.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px;">ไม่พบข้อมูลกลุ่มเรียน</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = groups.map(g => {
+                const levelClass = g.level === 'ปวช.' ? 'badge-level-vc' : 'badge-level-dip';
+                return `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700; color: #1e3a8a; font-size: 14px;">${g.code}</td>
+                        <td><strong>${g.name}</strong></td>
+                        <td style="text-align: center;"><span class="badge ${levelClass}">${g.level || 'ปวช.'}</span></td>
+                        <td>${g.program_name} <span style="font-size: 11px; color: var(--text-muted);">(${g.department_name || '-'})</span></td>
+                        <td style="text-align: center;">ปี ${g.year_level} (กลุ่ม ${g.group_number || 1})</td>
+                        <td style="text-align: center;"><span class="badge badge-secondary" style="font-weight: 600;">${g.student_count} คน</span></td>
+                        <td>${g.semester_name || '-'}</td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <button class="btn btn-sm btn-secondary" onclick="editGroup(${g.id})">✏️ แก้ไข</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // แสดงผลตารางสาขาวิชา
+        function renderPrograms(programs) {
+            const tbody = document.getElementById('programsTableBody');
+            if (!programs || programs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px;">ไม่พบข้อมูลสาขาวิชา</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = programs.map(p => {
+                const levelClass = p.level === 'ปวช.' ? 'badge-level-vc' : 'badge-level-dip';
+                return `
+                    <tr>
+                        <td style="font-family: monospace; font-weight: 700; color: #1e3a8a;">${p.code}</td>
+                        <td><strong>${p.name}</strong></td>
+                        <td style="text-align: center;"><span class="badge ${levelClass}">${p.level}</span></td>
+                        <td>${p.department_name || 'ส่วนกลาง'}</td>
+                        <td style="text-align: center;">${p.duration_years} ปี</td>
+                        <td style="text-align: center;"><span class="badge badge-secondary">${p.group_count || 0} กลุ่ม</span></td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <button class="btn btn-sm btn-outline-primary" style="margin-right: 4px;" onclick="createGroupForProgram(${p.id})">➕ สร้างกลุ่ม</button>
+                            <button class="btn btn-sm btn-secondary" onclick="editProgram(${p.id})">✏️ แก้ไข</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProgram(${p.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ค้นหาและกรองกลุ่มเรียน
+        function filterGroups() {
+            const q = document.getElementById('searchGroup').value.toLowerCase().trim();
+            const level = document.getElementById('filterLevel').value;
+            const programId = document.getElementById('filterProgram').value;
+            const yearLevel = document.getElementById('filterYearLevel').value;
+
+            const filtered = allGroups.filter(g => {
+                const matchQ = (g.code + ' ' + g.name + ' ' + (g.program_name || '')).toLowerCase().includes(q);
+                const matchLevel = !level || g.level === level;
+                const matchProg = !programId || String(g.program_id) === String(programId);
+                const matchYear = !yearLevel || String(g.year_level) === String(yearLevel);
+                return matchQ && matchLevel && matchProg && matchYear;
+            });
+
+            renderGroups(filtered);
+        }
+
+        // สลับแท็บ
+        function switchTab(tab) {
+            const btnGroups = document.getElementById('tabBtnGroups');
+            const btnPrograms = document.getElementById('tabBtnPrograms');
+            const contentGroups = document.getElementById('tabGroupsContent');
+            const contentPrograms = document.getElementById('tabProgramsContent');
+
+            if (tab === 'groups') {
+                btnGroups.classList.add('active');
+                btnPrograms.classList.remove('active');
+                contentGroups.style.display = 'block';
+                contentPrograms.style.display = 'none';
+            } else {
+                btnPrograms.classList.add('active');
+                btnGroups.classList.remove('active');
+                contentGroups.style.display = 'none';
+                contentPrograms.style.display = 'block';
+            }
+        }
+
+        // แนะนำชื่อและรหัสกลุ่มเรียนอัตโนมัติ
+        function suggestGroupNameAndCode() {
+            const progSelect = document.getElementById('gProgId');
+            const selectedOpt = progSelect.selectedOptions[0];
+            if (!selectedOpt || !selectedOpt.value) return;
+
+            const progName = selectedOpt.dataset.name;
+            const level = selectedOpt.dataset.level || 'ปวช.';
+            const year = document.getElementById('gYearLevel').value || '1';
+            const groupNum = document.getElementById('gGroupNumber').value || '1';
+
+            // ดึงปี พ.ศ. 2 ตัวท้าย เช่น 2567 -> 67
+            const currentYearStr = new Date().getFullYear() + 543;
+            const shortYear = String(currentYearStr).slice(-2);
+
+            // ตัวย่อสาขาวิชาแบบง่าย
+            let prefix = 'ก';
+            if (progName.includes('ช่างยนต์')) prefix = 'ชย.';
+            else if (progName.includes('ไฟฟ้า')) prefix = 'ชฟ.';
+            else if (progName.includes('ช่างกล')) prefix = 'ชก.';
+            else if (progName.includes('อิเล็กทรอนิกส์')) prefix = 'ชอ.';
+            else if (progName.includes('สารสนเทศ') || progName.includes('ไอที')) prefix = 'ทส.';
+            else if (progName.includes('บัญชี')) prefix = 'บช.';
+            else if (progName.includes('อาหาร')) prefix = 'อภ.';
+            else if (progName.includes('การตลาด')) prefix = 'บต.';
+            else prefix = progName.slice(0, 3) + '.';
+
+            suggestedCode = `${prefix}${shortYear}.${groupNum}`;
+            suggestedName = `${level}${year} ${progName} กลุ่ม ${groupNum}`;
+
+            const box = document.querySelector('.auto-suggest-box span');
+            if (box) {
+                box.innerHTML = `💡 แนะนำ: <strong>${suggestedCode}</strong> (${suggestedName})`;
+            }
+        }
+
+        function applySuggestion() {
+            if (suggestedCode) document.getElementById('gCode').value = suggestedCode;
+            if (suggestedName) document.getElementById('gName').value = suggestedName;
+        }
+
+        // ================= Modal Group Handlers =================
+        function openGroupModal() {
+            document.getElementById('modalGroupTitle').textContent = 'เพิ่มกลุ่มเรียนใหม่';
+            document.getElementById('groupForm').reset();
+            document.getElementById('groupId').value = '';
+            document.getElementById('gYearLevel').value = '1';
+            document.getElementById('gGroupNumber').value = '1';
+            document.getElementById('gStudentCount').value = '30';
+            if (currentSemesterId) document.getElementById('gSemesterId').value = currentSemesterId;
+            suggestGroupNameAndCode();
+            document.getElementById('groupModal').classList.add('show');
+        }
+
+        function createGroupForProgram(programId) {
+            openGroupModal();
+            document.getElementById('gProgId').value = programId;
+            suggestGroupNameAndCode();
+            switchTab('groups');
+        }
+
+        function editGroup(id) {
+            const g = allGroups.find(item => item.id === id);
+            if (!g) return;
+
+            document.getElementById('modalGroupTitle').textContent = 'แก้ไขข้อมูลกลุ่มเรียน';
+            document.getElementById('groupId').value = g.id;
+            document.getElementById('gProgId').value = g.program_id;
+            document.getElementById('gYearLevel').value = g.year_level;
+            document.getElementById('gGroupNumber').value = g.group_number || 1;
+            document.getElementById('gStudentCount').value = g.student_count || 30;
+            document.getElementById('gCode').value = g.code;
+            document.getElementById('gName').value = g.name;
+            if (g.semester_id) document.getElementById('gSemesterId').value = g.semester_id;
+
+            suggestGroupNameAndCode();
+            document.getElementById('groupModal').classList.add('show');
+        }
+
+        async function saveGroup(e) {
+            e.preventDefault();
+            const id = document.getElementById('groupId').value;
+            const body = {
+                code: document.getElementById('gCode').value.trim(),
+                name: document.getElementById('gName').value.trim(),
+                program_id: parseInt(document.getElementById('gProgId').value),
+                year_level: parseInt(document.getElementById('gYearLevel').value),
+                group_number: parseInt(document.getElementById('gGroupNumber').value),
+                student_count: parseInt(document.getElementById('gStudentCount').value),
+                semester_id: parseInt(document.getElementById('gSemesterId').value) || currentSemesterId
+            };
+
+            try {
+                if (id) {
+                    await apiCall(`/groups/${id}`, { method: 'PUT', body });
+                    showToast('แก้ไขข้อมูลกลุ่มเรียนสำเร็จ', 'success');
+                } else {
+                    await apiCall('/groups', { method: 'POST', body });
+                    showToast('เพิ่มกลุ่มเรียนสำเร็จ', 'success');
+                }
+                closeModal('groupModal');
+                await loadGroups();
+                await loadStats();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteGroup(id) {
+            showConfirmDialog('ยืนยันการลบกลุ่มเรียน', 'คุณแน่ใจหรือไม่ว่าต้องการลบกลุ่มเรียนนี้ออกจากระบบ?', async () => {
+                try {
+                    await apiCall(`/groups/${id}`, { method: 'DELETE' });
+                    showToast('ลบกลุ่มเรียนเรียบร้อยแล้ว', 'info');
+                    await loadGroups();
+                    await loadStats();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        // ================= Modal Program Handlers =================
+        function openProgramModal() {
+            document.getElementById('modalProgramTitle').textContent = 'เพิ่มสาขาวิชา / หลักสูตร';
+            document.getElementById('programForm').reset();
+            document.getElementById('programId').value = '';
+            document.getElementById('pLevel').value = 'ปวช.';
+            document.getElementById('pDuration').value = '3';
+            document.getElementById('programModal').classList.add('show');
+        }
+
+        function handleLevelChange() {
+            const level = document.getElementById('pLevel').value;
+            document.getElementById('pDuration').value = (level === 'ปวช.' ? 3 : 2);
+        }
+
+        function editProgram(id) {
+            const p = allPrograms.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('modalProgramTitle').textContent = 'แก้ไขสาขาวิชา';
+            document.getElementById('programId').value = p.id;
+            document.getElementById('pLevel').value = p.level;
+            document.getElementById('pCode').value = p.code;
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pDeptId').value = p.department_id || '';
+            document.getElementById('pDuration').value = p.duration_years || (p.level === 'ปวช.' ? 3 : 2);
+
+            document.getElementById('programModal').classList.add('show');
+        }
+
+        async function saveProgram(e) {
+            e.preventDefault();
+            const id = document.getElementById('programId').value;
+            const body = {
+                level: document.getElementById('pLevel').value,
+                code: document.getElementById('pCode').value.trim(),
+                name: document.getElementById('pName').value.trim(),
+                department_id: document.getElementById('pDeptId').value ? parseInt(document.getElementById('pDeptId').value) : null,
+                duration_years: parseInt(document.getElementById('pDuration').value) || 3
+            };
+
+            try {
+                if (id) {
+                    await apiCall(`/groups/programs/${id}`, { method: 'PUT', body });
+                    showToast('แก้ไขข้อมูลสาขาวิชาสำเร็จ', 'success');
+                } else {
+                    await apiCall('/groups/programs', { method: 'POST', body });
+                    showToast('เพิ่มสาขาวิชาสำเร็จ', 'success');
+                }
+                closeModal('programModal');
+                await loadPrograms();
+                await loadStats();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteProgram(id) {
+            showConfirmDialog('ยืนยันการลบสาขาวิชา', 'คุณแน่ใจหรือไม่ว่าต้องการลบสาขาวิชานี้?', async () => {
+                try {
+                    await apiCall(`/groups/programs/${id}`, { method: 'DELETE' });
+                    showToast('ลบสาขาวิชาเรียบร้อยแล้ว', 'info');
+                    await loadPrograms();
+                    await loadStats();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+    </script>
+</body>
+</html>

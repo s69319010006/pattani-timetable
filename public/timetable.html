@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการตารางสอน | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .filter-bar {
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .conflict-banner {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 5px solid #ef4444;
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .conflict-list {
+            list-style: none;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #991b1b;
+        }
+
+        .conflict-list li {
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .version-info-box {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .score-pill {
+            background: #ecfdf5;
+            color: #065f46;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            border: 1px solid #a7f3d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html" class="active"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>ตารางเรียน / ตารางสอน</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลดภาคเรียน...</span>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-outline" onclick="openNewVersionModal()">➕ เวอร์ชันใหม่</button>
+                    <button class="btn btn-primary" onclick="openAutoScheduleModal()">
+                        <span>🚀</span> สั่งจัดตารางอัตโนมัติ
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <!-- Version Selection Bar -->
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label class="form-label" style="margin: 0; font-weight: 600;">เวอร์ชันตาราง:</label>
+                        <select id="selectVersion" class="form-select" style="min-width: 260px;" onchange="onVersionChange()">
+                            <option value="">กำลังโหลดเวอร์ชัน...</option>
+                        </select>
+                        <div class="version-info-box" id="versionMetaBox">
+                            <span>สถานะ: <strong id="lblVersionStatus">-</strong></span>
+                            <span>คุณภาพ: <strong class="score-pill" id="lblVersionScore">-</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <button class="btn btn-sm btn-secondary" onclick="duplicateCurrentVersion()" title="คัดลอกเวอร์ชัน">📋 คัดลอก</button>
+                        <button class="btn btn-sm btn-success" id="btnPublishVersion" onclick="publishCurrentVersion()">📢 เผยแพร่ตารางนี้</button>
+                        <button class="btn btn-sm btn-danger" onclick="clearCurrentVersionEntries()" title="ล้างคาบที่ไม่ได้ล็อก">🗑️ ล้างคาบ</button>
+                    </div>
+                </div>
+
+                <!-- View Type Filter Bar -->
+                <div class="filter-bar" style="margin-top: -8px;">
+                    <div class="filter-group">
+                        <span style="font-weight: 600; font-size: 14px;">มุมมอง:</span>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="btn btn-sm btn-primary" id="btnViewGroup" onclick="setViewMode('group')">👥 รายกลุ่มเรียน</button>
+                            <button class="btn btn-sm btn-secondary" id="btnViewTeacher" onclick="setViewMode('teacher')">👨‍🏫 รายครูผู้สอน</button>
+                            <button class="btn btn-sm btn-secondary" id="btnViewRoom" onclick="setViewMode('room')">🏢 รายห้องเรียน</button>
+                        </div>
+
+                        <select id="selectEntity" class="form-select" style="min-width: 240px;" onchange="loadTimetableEntries()">
+                            <option value="">-- เลือกรายการ --</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <button class="btn btn-sm btn-outline" onclick="exportExcel()">📊 ส่งออก Excel</button>
+                        <button class="btn btn-sm btn-outline" onclick="exportPdf()">📄 พิมพ์ / PDF</button>
+                    </div>
+                </div>
+
+                <!-- Conflicts Alert Banner -->
+                <div class="conflict-banner" id="conflictBanner">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 20px;">⚠️</span>
+                            <div>
+                                <h4 style="color: #991b1b; font-size: 15px; margin: 0; font-weight: 700;">
+                                    ตรวจพบข้อขัดแย้งในตารางสอน (<span id="conflictCount">0</span> รายการ)
+                                </h4>
+                                <p style="font-size: 12px; color: #b91c1c; margin: 2px 0 0 0;">
+                                    ข้อขัดแย้งขั้นรุนแรง (Hard): <strong id="conflictHardCount">0</strong> รายการ | ข้อขัดแย้งทั่วไป (Soft): <strong id="conflictSoftCount">0</strong> รายการ
+                                </p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-sm btn-outline" style="background: #fff; border-color: #fca5a5; color: #991b1b;" onclick="openConflictModal()">
+                                🔍 ดูรายละเอียด & วิธีแก้ไข
+                            </button>
+                        </div>
+                    </div>
+                    <ul class="conflict-list" id="conflictList" style="margin-top: 10px;"></ul>
+                </div>
+
+                <!-- Timetable Grid -->
+                <div class="timetable-container">
+                    <table class="timetable-grid" id="timetableGrid">
+                        <thead>
+                            <tr id="gridHeaderRow">
+                                <th style="width: 100px;">วัน / คาบ</th>
+                                <!-- Periods 1 to 8 will be injected -->
+                            </tr>
+                        </thead>
+                        <tbody id="gridBody">
+                            <tr><td colspan="10" style="padding: 40px; text-align: center; color: #64748b;">กำลังโหลดตารางสอน...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal 1: Auto Schedule Modal -->
+    <div class="modal-backdrop" id="autoScheduleModal">
+        <div class="modal-content" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3>🚀 จัดตารางสอนอัตโนมัติ (AI Scheduler CSP)</h3>
+                <button class="modal-close" onclick="closeModal('autoScheduleModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+                    ระบบจะคำนวณตามเงื่อนไขบังคับ (Hard Constraints) เพื่อไม่ให้ครูชน ห้องชน หรือกลุ่มชน 100% พร้อมจัดสรรตามคะแนนความพึงพอใจ (Soft Constraints)
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">น้ำหนักการกระจายวิชาตลอดสัปดาห์ (Spread)</label>
+                    <input type="range" id="weightSpread" min="0.5" max="2.0" step="0.1" value="1.0" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">น้ำหนักการลดคาบว่างระหว่างวันของครู (Minimize Gaps)</label>
+                    <input type="range" id="weightGaps" min="0.5" max="2.0" step="0.1" value="1.0" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">รอบการปรับปรุงคุณภาพตาราง (Optimization Iterations)</label>
+                    <select id="optIterations" class="form-select">
+                        <option value="50">50 รอบ (เร็วมาก)</option>
+                        <option value="150" selected>150 รอบ (มาตรฐาน แนะนำ)</option>
+                        <option value="300">300 รอบ (ละเอียดสูงสุด)</option>
+                    </select>
+                </div>
+
+                <div id="schedulerLogContainer" style="display: none; margin-top: 16px;">
+                    <label class="form-label">บันทึกการทำงานของอัลกอริทึม (Execution Log):</label>
+                    <div class="log-viewer" id="schedulerLogs"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('autoScheduleModal')">ยกเลิก</button>
+                <button class="btn btn-primary" id="btnStartGenerate" onclick="startAutoGenerate()">
+                    ⚡ เริ่มจัดตารางอัตโนมัติ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Manual Slot Assignment Modal -->
+    <div class="modal-backdrop" id="manualSlotModal">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3>📝 จัดคาบสอนด้วยตนเอง</h3>
+                <button class="modal-close" onclick="closeModal('manualSlotModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 13px;">
+                    ช่องเวลา: <strong id="modalSlotDayTime">-</strong>
+                </div>
+
+                <input type="hidden" id="modalTimeSlotId">
+                <input type="hidden" id="modalEntryId">
+
+                <div class="form-group">
+                    <label class="form-label">เลือกวิชาและการมอบหมาย (Assignment)</label>
+                    <select id="modalSelectAssignment" class="form-select" onchange="previewSlotConflict()">
+                        <option value="">-- เลือกการมอบหมาย --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">เลือกห้องเรียน (Classroom)</label>
+                    <select id="modalSelectRoom" class="form-select" onchange="previewSlotConflict()">
+                        <option value="">-- เลือกห้องเรียน --</option>
+                    </select>
+                </div>
+
+                <div id="slotConflictAlert" style="display: none; padding: 10px; border-radius: 6px; font-size: 12px; margin-top: 10px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="btnDeleteEntry" style="display: none;" onclick="deleteEntryFromModal()">ลบคาบนี้</button>
+                <button class="btn btn-secondary" id="btnLockEntry" style="display: none;" onclick="toggleLockFromModal()">ล็อกคาบ</button>
+                <button class="btn btn-primary" id="btnSaveSlot" onclick="saveSlotEntry()">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Create Version Modal -->
+    <div class="modal-backdrop" id="newVersionModal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>➕ สร้างเวอร์ชันตารางใหม่ (ฉบับร่าง)</h3>
+                <button class="modal-close" onclick="closeModal('newVersionModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">ชื่อเวอร์ชัน</label>
+                    <input type="text" id="newVersionName" class="form-control" placeholder="เช่น ตารางสอนฉบับปรับปรุง 2" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">บันทึกเพิ่มเติม (Notes)</label>
+                    <textarea id="newVersionNotes" class="form-control" rows="3" placeholder="ระบุเหตุผลในการปรับปรุง..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('newVersionModal')">ยกเลิก</button>
+                <button class="btn btn-primary" onclick="submitCreateVersion()">สร้างเวอร์ชัน</button>
+            </div>
+        </div>
+    <!-- Modal 4: Conflict Details & Resolution Modal -->
+    <div class="modal-backdrop" id="conflictDetailModal">
+        <div class="modal-content" style="max-width: 680px;">
+            <div class="modal-header" style="background: #fef2f2; border-bottom: 1px solid #fee2e2;">
+                <h3 style="color: #991b1b; display: flex; align-items: center; gap: 8px;">
+                    <span>⚠️</span> รายการข้อขัดแย้งในตารางสอน
+                </h3>
+                <button class="modal-close" onclick="closeModal('conflictDetailModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                    ข้อขัดแย้งขั้นรุนแรง (Hard Conflict) จะทำให้ไม่สามารถเผยแพร่ตารางได้ คุณสามารถคลิกเพื่อแก้ไขหรือใช้การลากวาง (Drag & Drop) เพื่อสลับคาบเรียน
+                </p>
+                <div id="conflictModalItems" style="display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto;">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('conflictDetailModal')">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let currentSemesterId = null;
+        let currentVersionId = null;
+        let viewMode = 'group'; // 'group' | 'teacher' | 'room'
+        let timeSlots = [];
+        let allClassrooms = [];
+        let allAssignments = [];
+        let currentEntries = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            const semester = await loadCurrentSemester();
+            if (semester) {
+                currentSemesterId = semester.id;
+                await loadClassroomsAndAssignments();
+                await loadVersions();
+            }
+        });
+
+        async function loadClassroomsAndAssignments() {
+            try {
+                allClassrooms = await apiCall('/classrooms');
+                allAssignments = await apiCall(`/assignments/teaching-assignments?semester_id=${currentSemesterId}`);
+                timeSlots = await apiCall(`/assignments/time-slots?semester_id=${currentSemesterId}`);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadVersions() {
+            try {
+                const versions = await apiCall(`/timetable/versions?semester_id=${currentSemesterId}`);
+                const select = document.getElementById('selectVersion');
+                
+                if (versions.length === 0) {
+                    select.innerHTML = '<option value="">ยังไม่มีเวอร์ชัน - คลิกปุ่ม "เวอร์ชันใหม่"</option>';
+                    return;
+                }
+
+                select.innerHTML = versions.map(v => `
+                    <option value="${v.id}" ${v.status === 'published' ? 'selected' : ''}>
+                        v${v.version_number} : ${v.name} (${v.status === 'published' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'})
+                    </option>
+                `).join('');
+
+                if (!select.value && versions[0]) {
+                    select.value = versions[0].id;
+                }
+
+                currentVersionId = select.value;
+                await updateVersionMeta();
+                await initEntitySelect();
+                await loadTimetableEntries();
+                await checkVersionConflicts();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function updateVersionMeta() {
+            if (!currentVersionId) return;
+            try {
+                const v = await apiCall(`/timetable/versions/${currentVersionId}`);
+                document.getElementById('lblVersionStatus').textContent = v.status === 'published' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง';
+                document.getElementById('lblVersionStatus').className = `badge ${v.status === 'published' ? 'badge-success' : 'badge-warning'}`;
+                document.getElementById('lblVersionScore').textContent = `${(v.quality_score || 100).toFixed(0)}/100`;
+
+                const publishBtn = document.getElementById('btnPublishVersion');
+                if (v.status === 'published') {
+                    publishBtn.style.display = 'none';
+                } else {
+                    publishBtn.style.display = 'inline-flex';
+                }
+            } catch (e) {}
+        }
+
+        function onVersionChange() {
+            currentVersionId = document.getElementById('selectVersion').value;
+            updateVersionMeta();
+            loadTimetableEntries();
+            checkVersionConflicts();
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('btnViewGroup').className = `btn btn-sm ${mode === 'group' ? 'btn-primary' : 'btn-secondary'}`;
+            document.getElementById('btnViewTeacher').className = `btn btn-sm ${mode === 'teacher' ? 'btn-primary' : 'btn-secondary'}`;
+            document.getElementById('btnViewRoom').className = `btn btn-sm ${mode === 'room' ? 'btn-primary' : 'btn-secondary'}`;
+            initEntitySelect();
+        }
+
+        async function initEntitySelect() {
+            const select = document.getElementById('selectEntity');
+            select.innerHTML = '<option value="">กำลังโหลด...</option>';
+
+            try {
+                if (viewMode === 'group') {
+                    const groups = await apiCall(`/assignments/student-groups?semester_id=${currentSemesterId}`);
+                    select.innerHTML = groups.map(g => `<option value="${g.id}">${g.name} (${g.code})</option>`).join('');
+                } else if (viewMode === 'teacher') {
+                    const teachers = await apiCall('/teachers');
+                    select.innerHTML = teachers.map(t => `<option value="${t.id}">${t.prefix || ''}${t.first_name} ${t.last_name} (${t.department_name || '-'})</option>`).join('');
+                } else if (viewMode === 'room') {
+                    select.innerHTML = allClassrooms.map(c => `<option value="${c.id}">${c.name} (${c.room_type})</option>`).join('');
+                }
+
+                if (select.options.length > 0) {
+                    select.selectedIndex = 0;
+                }
+                loadTimetableEntries();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadTimetableEntries() {
+            if (!currentVersionId) return;
+            const entityId = document.getElementById('selectEntity').value;
+            if (!entityId) return;
+
+            let query = `?version_id=${currentVersionId}`;
+            if (viewMode === 'group') query += `&student_group_id=${entityId}`;
+            if (viewMode === 'teacher') query += `&teacher_id=${entityId}`;
+            if (viewMode === 'room') query += `&classroom_id=${entityId}`;
+
+            try {
+                currentEntries = await apiCall(`/timetable/entries${query}`);
+                renderTimetableGrid();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        function renderTimetableGrid() {
+            const gridHeaderRow = document.getElementById('gridHeaderRow');
+            const gridBody = document.getElementById('gridBody');
+
+            // periods 1 to 8
+            const periods = [1, 2, 3, 4, 'พัก', 5, 6, 7, 8];
+            const periodTimes = {
+                1: '08:30-09:30', 2: '09:30-10:30', 3: '10:30-11:30', 4: '11:30-12:30',
+                5: '13:30-14:30', 6: '14:30-15:30', 7: '15:30-16:30', 8: '16:30-17:30'
+            };
+
+            gridHeaderRow.innerHTML = '<th style="width: 100px;">วัน / คาบ</th>' + periods.map(p => {
+                if (p === 'พัก') return '<th style="width: 36px;">พัก</th>';
+                return `<th>คาบ ${p}<span class="period-time">${periodTimes[p] || ''}</span></th>`;
+            }).join('');
+
+            const days = [
+                { day: 1, name: 'จันทร์' },
+                { day: 2, name: 'อังคาร' },
+                { day: 3, name: 'พุธ' },
+                { day: 4, name: 'พฤหัสบดี' },
+                { day: 5, name: 'ศุกร์' }
+            ];
+
+            let html = '';
+            for (const d of days) {
+                html += `<tr><td class="day-header">${d.name}</td>`;
+
+                for (const p of periods) {
+                    if (p === 'พัก') {
+                        html += `<td class="period-break">พักเที่ยง</td>`;
+                        continue;
+                    }
+
+                    // หา slot
+                    const slot = timeSlots.find(ts => ts.day_of_week === d.day && ts.period_number === p);
+                    const slotId = slot ? slot.id : null;
+                    const entry = currentEntries.find(e => e.day_of_week === d.day && e.period_number === p);
+
+                    html += `<td class="period-slot" id="cell-${d.day}-${p}" 
+                                data-day="${d.day}" 
+                                data-day-name="${d.name}" 
+                                data-period="${p}" 
+                                data-slot-id="${slotId || ''}"
+                                ondragover="handleDragOver(event)"
+                                ondragleave="handleDragLeave(event)"
+                                ondrop="handleDrop(event, ${slotId || 'null'}, ${d.day}, ${p})">`;
+
+                    if (entry) {
+                        const isLab = entry.requires_lab ? 'lab-subject' : '';
+                        const isLock = entry.is_locked ? 'locked' : '';
+                        const isDraggable = !entry.is_locked;
+                        
+                        let subtitle = '';
+                        if (viewMode === 'group') subtitle = `👨‍🏫 ${entry.teacher_first_name}`;
+                        else if (viewMode === 'teacher') subtitle = `👥 ${entry.group_name}`;
+                        else subtitle = `👥 ${entry.group_name}`;
+
+                        html += `
+                            <div class="slot-entry-card ${isLab} ${isLock}" 
+                                 id="entry-${entry.id}"
+                                 draggable="${isDraggable}"
+                                 ondragstart="handleDragStart(event, ${entry.id})"
+                                 ondragend="handleDragEnd(event)"
+                                 onclick="onEntryCardClick(event, ${entry.id})"
+                                 title="${isDraggable ? 'ลากเพื่อย้ายไปยังคาบอื่น หรือคลิกเพื่อแก้ไข' : 'คาบนี้ถูกล็อกไว้ ไม่สามารถลากย้ายได้'}">
+                                <div class="entry-code">
+                                    <span>${isDraggable ? '<span class="drag-handle-hint">⠿</span>' : ''}${entry.subject_code}</span>
+                                    <span>${entry.is_locked ? '🔒' : ''}</span>
+                                </div>
+                                <div class="entry-name" title="${entry.subject_name}">${entry.subject_name}</div>
+                                <div class="entry-meta">
+                                    <span>${subtitle}</span>
+                                    <span class="entry-room">📍 ${entry.classroom_code}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else if (slotId) {
+                        html += `<button class="empty-slot-btn" onclick="openAddSlotModal(${slotId}, '${d.name}', ${p})" title="เพิ่มคาบสอน">+</button>`;
+                    }
+
+                    html += `</td>`;
+                }
+                html += `</tr>`;
+            }
+
+            gridBody.innerHTML = html;
+        }
+
+        // ================= Drag and Drop Logic =================
+        let draggedEntryId = null;
+        let isDraggingActive = false;
+
+        function handleDragStart(event, entryId) {
+            draggedEntryId = entryId;
+            isDraggingActive = true;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', entryId.toString());
+            
+            const card = document.getElementById(`entry-${entryId}`);
+            if (card) {
+                setTimeout(() => card.classList.add('is-dragging'), 10);
+            }
+        }
+
+        function handleDragEnd(event) {
+            isDraggingActive = false;
+            document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
+            document.querySelectorAll('.period-slot').forEach(el => {
+                el.classList.remove('drag-over');
+                el.classList.remove('drag-over-conflict');
+            });
+            setTimeout(() => { draggedEntryId = null; }, 100);
+        }
+
+        function handleDragOver(event) {
+            if (!draggedEntryId) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            const cell = event.currentTarget;
+            if (!cell.classList.contains('drag-over')) {
+                cell.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(event) {
+            const cell = event.currentTarget;
+            cell.classList.remove('drag-over');
+            cell.classList.remove('drag-over-conflict');
+        }
+
+        async function handleDrop(event, targetSlotId, day, period) {
+            event.preventDefault();
+            const cell = event.currentTarget;
+            cell.classList.remove('drag-over');
+            cell.classList.remove('drag-over-conflict');
+
+            const entryId = draggedEntryId || parseInt(event.dataTransfer.getData('text/plain'), 10);
+            if (!entryId) return;
+
+            const entry = currentEntries.find(e => e.id === entryId);
+            if (!entry) return;
+
+            if (entry.time_slot_id === targetSlotId) {
+                // Dropped on same slot, do nothing
+                return;
+            }
+
+            if (!targetSlotId) {
+                showToast('ไม่พบช่วงเวลาของคาบนี้', 'warning');
+                return;
+            }
+
+            // ตรวจสอบคาบปลายทางว่ามีวิชาอื่นอยู่หรือไม่
+            const existingEntryAtTarget = currentEntries.find(e => e.time_slot_id === targetSlotId);
+
+            try {
+                // ตรวจสอบข้อขัดแย้งก่อนย้าย
+                const checkRes = await apiCall('/timetable/check-slot', {
+                    method: 'POST',
+                    body: {
+                        version_id: currentVersionId,
+                        time_slot_id: targetSlotId,
+                        classroom_id: entry.classroom_id,
+                        teacher_id: entry.teacher_id,
+                        student_group_id: entry.student_group_id,
+                        exclude_entry_id: entry.id
+                    }
+                });
+
+                if (checkRes.hasConflict) {
+                    const messages = checkRes.conflicts.map(c => c.message).join('\n• ');
+                    const proceed = confirm(`⚠️ ตรวจพบข้อขัดแย้งในคาบเป้าหมาย:\n• ${messages}\n\nคุณต้องการบังคับย้าย (Force Move) หรือไม่?`);
+                    if (!proceed) {
+                        return;
+                    }
+                }
+
+                if (existingEntryAtTarget) {
+                    // มีวิชาเดิมในช่องปลายทาง -> สลับคาบ (Swap)
+                    if (existingEntryAtTarget.is_locked) {
+                        showToast(`ไม่สามารถสลับได้ เนื่องจากวิชาปลายทาง (${existingEntryAtTarget.subject_code}) ถูกล็อกไว้`, 'warning');
+                        return;
+                    }
+
+                    const swapConfirm = confirm(`ช่องเวลานี้มีวิชา ${existingEntryAtTarget.subject_code} อยู่แล้ว คุณต้องการ "สลับคาบเรียน" ระหว่าง 2 วิชานี้หรือไม่?`);
+                    if (!swapConfirm) return;
+
+                    // สลับ slot: ย้าย existing ไป slot ของ entry, แล้วย้าย entry ไป targetSlotId
+                    const origSlotId = entry.time_slot_id;
+                    await apiCall(`/timetable/entries/${existingEntryAtTarget.id}`, {
+                        method: 'PUT',
+                        body: { time_slot_id: origSlotId, force: true }
+                    });
+
+                    await apiCall(`/timetable/entries/${entry.id}`, {
+                        method: 'PUT',
+                        body: { time_slot_id: targetSlotId, force: true }
+                    });
+
+                    showToast(`สลับคาบเรียนสำเร็จ: ${entry.subject_code} ⇄ ${existingEntryAtTarget.subject_code}`, 'success');
+                } else {
+                    // ย้ายเข้าช่องว่างปกติ
+                    await apiCall(`/timetable/entries/${entry.id}`, {
+                        method: 'PUT',
+                        body: { time_slot_id: targetSlotId, force: true }
+                    });
+                    showToast(`ย้ายวิชา ${entry.subject_code} ไปยังคาบที่ ${period} สำเร็จ`, 'success');
+                }
+
+                await loadTimetableEntries();
+                await checkVersionConflicts();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function onEntryCardClick(event, entryId) {
+            // ป้องกันไม่ให้เปิด modal ถ้าเพิ่ง drag จบ
+            if (isDraggingActive) return;
+            openEditSlotModal(entryId);
+        }
+
+        let latestConflictsReport = null;
+
+        async function checkVersionConflicts() {
+            if (!currentVersionId) return;
+            try {
+                latestConflictsReport = await apiCall(`/timetable/conflicts/${currentVersionId}`);
+                const banner = document.getElementById('conflictBanner');
+                const list = document.getElementById('conflictList');
+                const hardCountSpan = document.getElementById('conflictHardCount');
+                const softCountSpan = document.getElementById('conflictSoftCount');
+
+                // ลบไฮไลต์ข้อขัดแย้งเดิมบนการ์ดทั้งหมด
+                document.querySelectorAll('.slot-entry-card').forEach(el => el.classList.remove('has-conflict'));
+
+                if (latestConflictsReport.totalConflicts > 0) {
+                    banner.style.display = 'block';
+                    document.getElementById('conflictCount').textContent = latestConflictsReport.totalConflicts;
+                    if (hardCountSpan) hardCountSpan.textContent = latestConflictsReport.hardConflicts || 0;
+                    if (softCountSpan) softCountSpan.textContent = latestConflictsReport.softConflicts || 0;
+
+                    // แสดงตัวอย่าง 3 รายการแรก
+                    const previewItems = latestConflictsReport.conflicts.slice(0, 3);
+                    list.innerHTML = previewItems.map(c => `
+                        <li>
+                            <span>${c.severity === 'hard' ? '🔴' : '🟡'}</span>
+                            <strong>${c.message}</strong>
+                        </li>
+                    `).join('');
+
+                    if (latestConflictsReport.conflicts.length > 3) {
+                        list.innerHTML += `<li style="color: #64748b; font-style: italic;">... และอีก ${latestConflictsReport.conflicts.length - 3} รายการ (คลิก "ดูรายละเอียด & วิธีแก้ไข" เพื่อดูทั้งหมด)</li>`;
+                    }
+
+                    // ไฮไลต์การ์ดที่มีข้อขัดแย้งบนตาราง
+                    for (const c of latestConflictsReport.conflicts) {
+                        if (c.entryIds && Array.isArray(c.entryIds)) {
+                            for (const eid of c.entryIds) {
+                                const card = document.getElementById(`entry-${eid}`);
+                                if (card) card.classList.add('has-conflict');
+                            }
+                        }
+                    }
+                } else {
+                    banner.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('checkVersionConflicts error:', e);
+            }
+        }
+
+        function openConflictModal() {
+            if (!latestConflictsReport || latestConflictsReport.totalConflicts === 0) {
+                showToast('ไม่พบข้อขัดแย้งในเวอร์ชันนี้', 'info');
+                return;
+            }
+
+            const container = document.getElementById('conflictModalItems');
+            container.innerHTML = latestConflictsReport.conflicts.map((c, idx) => {
+                const isHard = c.severity === 'hard';
+                const badgeClass = isHard ? 'badge-danger' : 'badge-warning';
+                const badgeText = isHard ? 'ข้อขัดแย้งรุนแรง (Hard)' : 'ข้อขัดแย้งทั่วไป (Soft)';
+
+                return `
+                    <div style="background: ${isHard ? '#fef2f2' : '#fffbeb'}; border: 1px solid ${isHard ? '#fecaca' : '#fde68a'}; border-radius: 8px; padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <span style="font-size: 11px; color: #64748b;">ลำดับ #${idx + 1}</span>
+                        </div>
+                        <div style="font-weight: 600; font-size: 13px; color: ${isHard ? '#991b1b' : '#92400e'};">
+                            ${c.message}
+                        </div>
+                        ${c.details && c.details.length > 0 ? `
+                            <div style="margin-top: 6px; font-size: 12px; color: #475569; background: rgba(255,255,255,0.7); padding: 6px 10px; border-radius: 4px;">
+                                ${c.details.map(d => `<div>• ${d}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                        <div style="margin-top: 8px; font-size: 11px; color: #64748b;">
+                            💡 <strong>วิธีแก้ไข:</strong> ลากวิชานี้ไปยังช่วงเวลาว่างอื่น, เปลี่ยนห้องเรียน, หรือคลิกที่ตัวการ์ดเพื่อสลับคาบ
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('conflictDetailModal').classList.add('show');
+        }
+
+        // ================= Modals Logic =================
+        function openAutoScheduleModal() {
+            document.getElementById('schedulerLogContainer').style.display = 'none';
+            document.getElementById('btnStartGenerate').disabled = false;
+            document.getElementById('autoScheduleModal').classList.add('show');
+        }
+
+        async function startAutoGenerate() {
+            const btn = document.getElementById('btnStartGenerate');
+            btn.disabled = true;
+            btn.textContent = '⏳ กำลังประมวลผล...';
+
+            const logBox = document.getElementById('schedulerLogs');
+            const logContainer = document.getElementById('schedulerLogContainer');
+            logContainer.style.display = 'block';
+            logBox.innerHTML = '<div class="log-entry info">🚀 กำลังเริ่มต้น CSP Backtracking Scheduler...</div>';
+
+            try {
+                const res = await apiCall('/timetable/generate', {
+                    method: 'POST',
+                    body: {
+                        semester_id: currentSemesterId,
+                        version_id: currentVersionId,
+                        preferences: {
+                            weight_spread: parseFloat(document.getElementById('weightSpread').value),
+                            weight_gaps: parseFloat(document.getElementById('weightGaps').value),
+                            optimization_iterations: parseInt(document.getElementById('optIterations').value)
+                        }
+                    }
+                });
+
+                if (res.log && Array.isArray(res.log)) {
+                    logBox.innerHTML = res.log.map(l => `<div class="log-entry ${l.level}">[${l.level.toUpperCase()}] ${l.message}</div>`).join('');
+                }
+
+                if (res.success) {
+                    showToast('จัดตารางสอนอัตโนมัติสำเร็จ!', 'success');
+                    updateVersionMeta();
+                    loadTimetableEntries();
+                    checkVersionConflicts();
+                } else {
+                    showToast(res.error || 'การจัดตารางไม่สำเร็จ', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ เริ่มจัดตารางอัตโนมัติ';
+            }
+        }
+
+        function openAddSlotModal(timeSlotId, dayName, period) {
+            document.getElementById('modalEntryId').value = '';
+            document.getElementById('modalTimeSlotId').value = timeSlotId;
+            document.getElementById('modalSlotDayTime').textContent = `วัน${dayName} คาบที่ ${period}`;
+
+            document.getElementById('btnDeleteEntry').style.display = 'none';
+            document.getElementById('btnLockEntry').style.display = 'none';
+
+            // Populate assignments & rooms
+            const selAss = document.getElementById('modalSelectAssignment');
+            selAss.innerHTML = '<option value="">-- เลือกวิชาและการมอบหมาย --</option>' + allAssignments.map(a => `
+                <option value="${a.id}">${a.subject_code} ${a.subject_name} (${a.teacher_first_name} → ${a.group_name})</option>
+            `).join('');
+
+            const selRoom = document.getElementById('modalSelectRoom');
+            selRoom.innerHTML = '<option value="">-- เลือกห้องเรียน --</option>' + allClassrooms.map(c => `
+                <option value="${c.id}">${c.name} (${c.room_type} จุ ${c.capacity})</option>
+            `).join('');
+
+            document.getElementById('slotConflictAlert').style.display = 'none';
+            document.getElementById('manualSlotModal').classList.add('show');
+        }
+
+        function openEditSlotModal(entryId) {
+            const entry = currentEntries.find(e => e.id === entryId);
+            if (!entry) return;
+
+            document.getElementById('modalEntryId').value = entry.id;
+            document.getElementById('modalTimeSlotId').value = entry.time_slot_id;
+            document.getElementById('modalSlotDayTime').textContent = `วัน${entry.day_name} คาบที่ ${entry.period_number}`;
+
+            const selAss = document.getElementById('modalSelectAssignment');
+            selAss.innerHTML = `<option value="${entry.teaching_assignment_id}">${entry.subject_code} ${entry.subject_name} (${entry.teacher_first_name} → ${entry.group_name})</option>`;
+            selAss.disabled = true;
+
+            const selRoom = document.getElementById('modalSelectRoom');
+            selRoom.innerHTML = allClassrooms.map(c => `
+                <option value="${c.id}" ${c.id === entry.classroom_id ? 'selected' : ''}>${c.name} (${c.room_type})</option>
+            `).join('');
+
+            document.getElementById('btnDeleteEntry').style.display = 'inline-flex';
+            const lockBtn = document.getElementById('btnLockEntry');
+            lockBtn.style.display = 'inline-flex';
+            lockBtn.textContent = entry.is_locked ? '🔓 ปลดล็อก' : '🔒 ล็อกคาบ';
+
+            document.getElementById('slotConflictAlert').style.display = 'none';
+            document.getElementById('manualSlotModal').classList.add('show');
+        }
+
+        async function previewSlotConflict() {
+            const assId = document.getElementById('modalSelectAssignment').value;
+            const roomId = document.getElementById('modalSelectRoom').value;
+            const timeSlotId = document.getElementById('modalTimeSlotId').value;
+            const alertBox = document.getElementById('slotConflictAlert');
+
+            if (!assId || !roomId || !timeSlotId) {
+                alertBox.style.display = 'none';
+                return;
+            }
+
+            const assignment = allAssignments.find(a => a.id === parseInt(assId));
+            if (!assignment) return;
+
+            try {
+                const res = await apiCall('/timetable/check-slot', {
+                    method: 'POST',
+                    body: {
+                        version_id: currentVersionId,
+                        time_slot_id: timeSlotId,
+                        classroom_id: roomId,
+                        teacher_id: assignment.teacher_id,
+                        student_group_id: assignment.student_group_id
+                    }
+                });
+
+                if (res.hasConflict) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#fee2e2';
+                    alertBox.style.color = '#991b1b';
+                    alertBox.innerHTML = '⚠️ คำเตือน: ' + res.conflicts.map(c => c.message).join('<br>');
+                } else {
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#dcfce7';
+                    alertBox.style.color = '#15803d';
+                    alertBox.innerHTML = '✅ ช่องเวลานี้ว่างและเหมาะสม ไม่มีข้อขัดแย้ง';
+                }
+            } catch (e) {}
+        }
+
+        async function saveSlotEntry() {
+            const entryId = document.getElementById('modalEntryId').value;
+            const timeSlotId = document.getElementById('modalTimeSlotId').value;
+            const roomId = document.getElementById('modalSelectRoom').value;
+            const assId = document.getElementById('modalSelectAssignment').value;
+
+            if (!roomId) {
+                showToast('กรุณาเลือกห้องเรียน', 'warning');
+                return;
+            }
+
+            try {
+                if (entryId) {
+                    // Update
+                    await apiCall(`/timetable/entries/${entryId}`, {
+                        method: 'PUT',
+                        body: { time_slot_id: timeSlotId, classroom_id: roomId, force: true }
+                    });
+                    showToast('บันทึกการแก้ไขแล้ว', 'success');
+                } else {
+                    // Create
+                    await apiCall('/timetable/entries', {
+                        method: 'POST',
+                        body: {
+                            version_id: currentVersionId,
+                            teaching_assignment_id: assId,
+                            time_slot_id: timeSlotId,
+                            classroom_id: roomId,
+                            force: true
+                        }
+                    });
+                    showToast('เพิ่มคาบเรียนสำเร็จ', 'success');
+                }
+
+                closeModal('manualSlotModal');
+                loadTimetableEntries();
+                checkVersionConflicts();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function toggleLockFromModal() {
+            const entryId = document.getElementById('modalEntryId').value;
+            if (!entryId) return;
+
+            try {
+                const res = await apiCall(`/timetable/entries/${entryId}/lock`, { method: 'POST' });
+                showToast(res.message, 'info');
+                closeModal('manualSlotModal');
+                loadTimetableEntries();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteEntryFromModal() {
+            const entryId = document.getElementById('modalEntryId').value;
+            if (!entryId) return;
+
+            if (confirm('คุณต้องการลบคาบสอนนี้ใช่หรือไม่?')) {
+                try {
+                    await apiCall(`/timetable/entries/${entryId}`, { method: 'DELETE' });
+                    showToast('ลบคาบสอนเรียบร้อย', 'info');
+                    closeModal('manualSlotModal');
+                    loadTimetableEntries();
+                    checkVersionConflicts();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }
+        }
+
+        function openNewVersionModal() {
+            document.getElementById('newVersionName').value = '';
+            document.getElementById('newVersionNotes').value = '';
+            document.getElementById('newVersionModal').classList.add('show');
+        }
+
+        async function submitCreateVersion() {
+            const name = document.getElementById('newVersionName').value.trim();
+            const notes = document.getElementById('newVersionNotes').value.trim();
+            if (!name) {
+                showToast('กรุณากรอกชื่อเวอร์ชัน', 'warning');
+                return;
+            }
+
+            try {
+                const res = await apiCall('/timetable/versions', {
+                    method: 'POST',
+                    body: { semester_id: currentSemesterId, name, notes }
+                });
+                showToast(res.message, 'success');
+                closeModal('newVersionModal');
+                await loadVersions();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function duplicateCurrentVersion() {
+            if (!currentVersionId) return;
+            if (confirm('ต้องการคัดลอกตารางนี้เป็นเวอร์ชันใหม่ใช่หรือไม่?')) {
+                try {
+                    const res = await apiCall(`/timetable/versions/${currentVersionId}/duplicate`, { method: 'POST' });
+                    showToast(res.message, 'success');
+                    await loadVersions();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }
+        }
+
+        async function publishCurrentVersion() {
+            if (!currentVersionId) return;
+            showConfirmDialog(
+                'ยืนยันการเผยแพร่ตารางสอน',
+                'เมื่อเผยแพร่แล้ว ตารางนี้จะกลายเป็นตารางหลักสำหรับนักศึกษาและครูผู้สอน คุณแน่ใจหรือไม่?',
+                async () => {
+                    try {
+                        const res = await apiCall(`/timetable/versions/${currentVersionId}/publish`, { method: 'POST' });
+                        showToast(res.message, 'success');
+                        await updateVersionMeta();
+                        await loadVersions();
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                    }
+                }
+            );
+        }
+
+        async function clearCurrentVersionEntries() {
+            if (!currentVersionId) return;
+            showConfirmDialog(
+                'ยืนยันการล้างคาบสอน',
+                'ระบบจะลบคาบสอนทั้งหมดในเวอร์ชันนี้ (ยกเว้นคาบที่กดล็อกไว้) คุณแน่ใจหรือไม่?',
+                async () => {
+                    try {
+                        const res = await apiCall(`/timetable/versions/${currentVersionId}/entries`, { method: 'DELETE' });
+                        showToast(res.message, 'info');
+                        loadTimetableEntries();
+                        checkVersionConflicts();
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                    }
+                },
+                true
+            );
+        }
+
+        function exportExcel() {
+            if (!currentVersionId) return;
+            const entityId = document.getElementById('selectEntity').value;
+            window.open(`/api/reports/export/timetable/excel?version_id=${currentVersionId}&filter_type=${viewMode}&filter_id=${entityId}`, '_blank');
+        }
+
+        function exportPdf() {
+            if (!currentVersionId) return;
+            const entityId = document.getElementById('selectEntity').value;
+            window.open(`/api/reports/export/timetable/pdf?version_id=${currentVersionId}&filter_type=${viewMode}&filter_id=${entityId}`, '_blank');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+    </script>
+</body>
+</html>

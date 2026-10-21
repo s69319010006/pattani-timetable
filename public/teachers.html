@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการข้อมูลครูผู้สอน | ระบบจัดตารางสอนอัตโนมัติ วิทยาลัยการอาชีพปัตตานี</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .availability-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .availability-grid th, .availability-grid td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .availability-grid th {
+            background: #f8fafc;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .avail-cell {
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 11px;
+            user-select: none;
+            height: 38px;
+        }
+
+        .avail-cell.available {
+            background-color: #f0fdf4;
+            color: #166534;
+        }
+
+        .avail-cell.unavailable {
+            background-color: #fee2e2;
+            color: #991b1b;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>วอศ.ปัตตานี</h2>
+                    <p>ระบบจัดตารางสอน</p>
+                </div>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span> แดชบอร์ด</a></li>
+                <li><a href="timetable.html"><span class="menu-icon">📅</span> ตารางสอน</a></li>
+                <li><a href="teachers.html" class="active"><span class="menu-icon">👨‍🏫</span> ครูผู้สอน</a></li>
+                <li><a href="subjects.html"><span class="menu-icon">📚</span> รายวิชา</a></li>
+                <li><a href="classrooms.html"><span class="menu-icon">🏢</span> ห้องเรียน</a></li>
+                <li><a href="groups.html"><span class="menu-icon">👥</span> กลุ่มเรียน / ระดับชั้น</a></li>
+                <li><a href="assignments.html"><span class="menu-icon">📝</span> มอบหมายการสอน</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📈</span> รายงาน & นำเข้า</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar" id="sidebarUserAvatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="sidebarUserName">ผู้ดูแลระบบ</div>
+                        <div class="user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="ออกจากระบบ">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="page-title">
+                    <h1>จัดการข้อมูลครูผู้สอน (Teachers)</h1>
+                    <span class="semester-badge" id="currentSemesterBadge">📅 กำลังโหลด...</span>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-primary" onclick="openTeacherModal()">
+                        <span>➕</span> เพิ่มครูผู้สอน
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>รายชื่อครูผู้สอนทั้งหมด</h3>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="searchTeacher" class="form-control" placeholder="ค้นหาชื่อหรือรหัส..." style="width: 220px;" oninput="filterTeachers()">
+                            <select id="filterDept" class="form-select" style="width: 200px;" onchange="filterTeachers()">
+                                <option value="">-- แผนกทั้งหมด --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>รหัส</th>
+                                        <th>ชื่อ-นามสกุล</th>
+                                        <th>แผนกวิชา</th>
+                                        <th>ตำแหน่ง</th>
+                                        <th style="text-align: center;">ภาระสอนสูงสุด</th>
+                                        <th style="text-align: center;">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teachersTableBody">
+                                    <tr><td colspan="6" style="text-align: center;">กำลังโหลดข้อมูล...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal 1: Teacher Add/Edit -->
+    <div class="modal-backdrop" id="teacherModal">
+        <div class="modal-content" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="modalTeacherTitle">เพิ่มข้อมูลครูผู้สอน</h3>
+                <button class="modal-close" onclick="closeModal('teacherModal')">✕</button>
+            </div>
+            <form id="teacherForm" onsubmit="saveTeacher(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="teacherId">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">รหัสบุคลากร *</label>
+                            <input type="text" id="tEmpId" class="form-control" required placeholder="เช่น T008">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">คำนำหน้า</label>
+                            <input type="text" id="tPrefix" class="form-control" placeholder="นาย / นาง / นางสาว">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">ชื่อ *</label>
+                            <input type="text" id="tFirstname" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">นามสกุล *</label>
+                            <input type="text" id="tLastname" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">แผนกวิชา</label>
+                            <select id="tDeptId" class="form-select">
+                                <option value="">-- เลือกแผนกวิชา --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ตำแหน่ง</label>
+                            <input type="text" id="tPosition" class="form-control" placeholder="เช่น ครูชำนาญการ">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">ชั่วโมงสูงสุด/สัปดาห์</label>
+                            <input type="number" id="tMaxHoursWeek" class="form-control" value="20" min="1" max="40">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ชั่วโมงสูงสุด/วัน</label>
+                            <input type="number" id="tMaxHoursDay" class="form-control" value="6" min="1" max="10">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">อีเมล</label>
+                        <input type="email" id="tEmail" class="form-control" placeholder="name@pattani.ac.th">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('teacherModal')">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Availability Matrix Modal -->
+    <div class="modal-backdrop" id="availabilityModal">
+        <div class="modal-content" style="max-width: 680px;">
+            <div class="modal-header">
+                <h3>⏰ กำหนดช่วงเวลาว่าง / ไม่ว่าง</h3>
+                <button class="modal-close" onclick="closeModal('availabilityModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">
+                    ครู: <strong id="availTeacherName">-</strong> (คลิกที่ช่องคาบเพื่อสลับ <strong>ว่าง (เขียว)</strong> หรือ <strong>ไม่ว่าง (แดง)</strong>)
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">เหตุผลที่ไม่ว่าง (ระบุเมื่อตั้งเป็นไม่ว่าง)</label>
+                    <input type="text" id="availReason" class="form-control" value="ประกอบศาสนกิจวันศุกร์ / ภารกิจวิทยาลัย">
+                </div>
+
+                <div class="table-responsive">
+                    <table class="availability-grid">
+                        <thead>
+                            <tr id="availHeader">
+                                <th style="width: 80px;">วัน</th>
+                                <th>คาบ 1</th><th>คาบ 2</th><th>คาบ 3</th><th>คาบ 4</th>
+                                <th>คาบ 5</th><th>คาบ 6</th><th>คาบ 7</th><th>คาบ 8</th>
+                            </tr>
+                        </thead>
+                        <tbody id="availBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('availabilityModal')">ปิด</button>
+                <button class="btn btn-primary" onclick="saveAvailability()">บันทึกเวลาว่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allTeachers = [];
+        let allDepts = [];
+        let currentSemesterId = null;
+        let selectedTeacherId = null;
+        let timeSlots = [];
+        let currentUnavailableSlots = new Set();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+
+            const semester = await loadCurrentSemester();
+            if (semester) currentSemesterId = semester.id;
+
+            await loadDepartments();
+            await loadTeachers();
+        });
+
+        async function loadDepartments() {
+            try {
+                allDepts = await apiCall('/assignments/departments');
+                const filterSelect = document.getElementById('filterDept');
+                const formSelect = document.getElementById('tDeptId');
+
+                const opts = allDepts.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                filterSelect.innerHTML = '<option value="">-- แผนกทั้งหมด --</option>' + opts;
+                formSelect.innerHTML = '<option value="">-- เลือกแผนกวิชา --</option>' + opts;
+            } catch (e) {}
+        }
+
+        async function loadTeachers() {
+            try {
+                allTeachers = await apiCall('/teachers');
+                renderTeachers(allTeachers);
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderTeachers(teachers) {
+            const tbody = document.getElementById('teachersTableBody');
+            if (teachers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">ไม่พบข้อมูลครู</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = teachers.map(t => `
+                <tr>
+                    <td style="font-family: monospace; font-weight: 600;">${t.employee_id}</td>
+                    <td><strong>${t.prefix || ''}${t.first_name} ${t.last_name}</strong></td>
+                    <td><span class="badge badge-info">${t.department_name || 'ไม่ระบุ'}</span></td>
+                    <td>${t.position || '-'}</td>
+                    <td style="text-align: center;"><span class="badge badge-secondary">${t.max_hours_per_week} ชม./สัปดาห์</span></td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="btn btn-sm btn-outline" onclick="openAvailabilityModal(${t.id}, '${t.first_name} ${t.last_name}')" title="กำหนดเวลาว่าง">⏰ เวลาว่าง</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editTeacher(${t.id})">✏️ แก้ไข</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${t.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterTeachers() {
+            const q = document.getElementById('searchTeacher').value.toLowerCase().trim();
+            const deptId = document.getElementById('filterDept').value;
+
+            const filtered = allTeachers.filter(t => {
+                const matchQ = (t.first_name + ' ' + t.last_name + ' ' + t.employee_id).toLowerCase().includes(q);
+                const matchDept = !deptId || t.department_id === parseInt(deptId);
+                return matchQ && matchDept;
+            });
+
+            renderTeachers(filtered);
+        }
+
+        function openTeacherModal() {
+            document.getElementById('modalTeacherTitle').textContent = 'เพิ่มข้อมูลครูผู้สอน';
+            document.getElementById('teacherForm').reset();
+            document.getElementById('teacherId').value = '';
+            document.getElementById('teacherModal').classList.add('show');
+        }
+
+        function editTeacher(id) {
+            const t = allTeachers.find(item => item.id === id);
+            if (!t) return;
+
+            document.getElementById('modalTeacherTitle').textContent = 'แก้ไขข้อมูลครูผู้สอน';
+            document.getElementById('teacherId').value = t.id;
+            document.getElementById('tEmpId').value = t.employee_id;
+            document.getElementById('tPrefix').value = t.prefix || '';
+            document.getElementById('tFirstname').value = t.first_name;
+            document.getElementById('tLastname').value = t.last_name;
+            document.getElementById('tDeptId').value = t.department_id || '';
+            document.getElementById('tPosition').value = t.position || '';
+            document.getElementById('tMaxHoursWeek').value = t.max_hours_per_week || 20;
+            document.getElementById('tMaxHoursDay').value = t.max_hours_per_day || 6;
+            document.getElementById('tEmail').value = t.email || '';
+
+            document.getElementById('teacherModal').classList.add('show');
+        }
+
+        async function saveTeacher(e) {
+            e.preventDefault();
+            const id = document.getElementById('teacherId').value;
+            const body = {
+                employee_id: document.getElementById('tEmpId').value.trim(),
+                prefix: document.getElementById('tPrefix').value.trim(),
+                first_name: document.getElementById('tFirstname').value.trim(),
+                last_name: document.getElementById('tLastname').value.trim(),
+                department_id: document.getElementById('tDeptId').value || null,
+                position: document.getElementById('tPosition').value.trim(),
+                max_hours_per_week: parseInt(document.getElementById('tMaxHoursWeek').value),
+                max_hours_per_day: parseInt(document.getElementById('tMaxHoursDay').value),
+                email: document.getElementById('tEmail').value.trim()
+            };
+
+            try {
+                if (id) {
+                    await apiCall(`/teachers/${id}`, { method: 'PUT', body });
+                    showToast('แก้ไขข้อมูลครูสำเร็จ', 'success');
+                } else {
+                    await apiCall('/teachers', { method: 'POST', body });
+                    showToast('เพิ่มครูผู้สอนสำเร็จ', 'success');
+                }
+                closeModal('teacherModal');
+                await loadTeachers();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function deleteTeacher(id) {
+            showConfirmDialog('ยืนยันการลบครูผู้สอน', 'คุณแน่ใจหรือไม่ว่าต้องการลบครูผู้สอนท่านนี้?', async () => {
+                try {
+                    await apiCall(`/teachers/${id}`, { method: 'DELETE' });
+                    showToast('ลบข้อมูลครูเรียบร้อยแล้ว', 'info');
+                    await loadTeachers();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }, true);
+        }
+
+        // ================= Availability Matrix =================
+        async function openAvailabilityModal(teacherId, teacherName) {
+            selectedTeacherId = teacherId;
+            document.getElementById('availTeacherName').textContent = teacherName;
+            
+            try {
+                timeSlots = await apiCall(`/assignments/time-slots?semester_id=${currentSemesterId}`);
+                const availData = await apiCall(`/assignments/availability?teacher_id=${teacherId}&semester_id=${currentSemesterId}`);
+                
+                currentUnavailableSlots = new Set(availData.map(a => a.time_slot_id));
+                renderAvailabilityGrid();
+                document.getElementById('availabilityModal').classList.add('show');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderAvailabilityGrid() {
+            const tbody = document.getElementById('availBody');
+            const days = [
+                { day: 1, name: 'จันทร์' },
+                { day: 2, name: 'อังคาร' },
+                { day: 3, name: 'พุธ' },
+                { day: 4, name: 'พฤหัสบดี' },
+                { day: 5, name: 'ศุกร์' }
+            ];
+
+            let html = '';
+            for (const d of days) {
+                html += `<tr><td style="font-weight: 600;">${d.name}</td>`;
+                for (let p = 1; p <= 8; p++) {
+                    const slot = timeSlots.find(ts => ts.day_of_week === d.day && ts.period_number === p);
+                    if (slot) {
+                        const isUnavail = currentUnavailableSlots.has(slot.id);
+                        html += `
+                            <td class="avail-cell ${isUnavail ? 'unavailable' : 'available'}" 
+                                onclick="toggleSlotAvailability(${slot.id})" id="slot-avail-${slot.id}">
+                                ${isUnavail ? '⛔ ไม่ว่าง' : '✓ ว่าง'}
+                            </td>
+                        `;
+                    } else {
+                        html += `<td>-</td>`;
+                    }
+                }
+                html += `</tr>`;
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        function toggleSlotAvailability(slotId) {
+            const cell = document.getElementById(`slot-avail-${slotId}`);
+            if (currentUnavailableSlots.has(slotId)) {
+                currentUnavailableSlots.delete(slotId);
+                cell.className = 'avail-cell available';
+                cell.textContent = '✓ ว่าง';
+            } else {
+                currentUnavailableSlots.add(slotId);
+                cell.className = 'avail-cell unavailable';
+                cell.textContent = '⛔ ไม่ว่าง';
+            }
+        }
+
+        async function saveAvailability() {
+            const reason = document.getElementById('availReason').value.trim();
+            try {
+                await apiCall('/assignments/availability/bulk', {
+                    method: 'POST',
+                    body: {
+                        teacher_id: selectedTeacherId,
+                        semester_id: currentSemesterId,
+                        slots: Array.from(currentUnavailableSlots),
+                        reason: reason
+                    }
+                });
+                showToast('บันทึกช่วงเวลาว่างเรียบร้อยแล้ว', 'success');
+                closeModal('availabilityModal');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+    </script>
+</body>
+</html>
